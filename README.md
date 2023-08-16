@@ -52,6 +52,7 @@ jumpwire.yaml
 Create a configuration file called `jumpwire.yaml`. The following example configures JumpWire to proxy through to a PostgreSQL server running on the local host with a database named `test_db` and a table named `users`:
 
 ```yaml
+# configure a postgresql database
 manifest:
 - id: 0779b97a-c04a-48f9-9483-22e8b0487de4
   name: my local db
@@ -66,6 +67,7 @@ manifest:
     ssl: false
     port: 5432
 
+# set labels on fields
 proxy_schema:
   - id: f764dd5b-fb38-401a-b414-edfa8230fd11
     name: users
@@ -93,8 +95,8 @@ Start the JumpWire engine:
 ``` shell
 export ENCRYPTION_KEY=$(openssl rand -base64 32)
 docker run -d --name jumpwire \
-  -p 4004:4004 -p 4004:4004 -p 3307:3307 -p 6432:6432 \
-  -v $(pwd)/jumpwire.yaml:/etc/jumpwire/jumpwire.yaml
+  -p 4004:4004 -p 4443:4443 -p 3307:3307 -p 6432:6432 \
+  -v $(pwd)/jumpwire.yaml:/etc/jumpwire/jumpwire.yaml \
   -e JUMPWIRE_CONFIG_PATH=/etc/jumpwire \
   -e JUMPWIRE_ENCRYPTION_KEY="${ENCRYPTION_KEY}" \
   ghcr.io/extragoodlabs/jumpwire:latest
