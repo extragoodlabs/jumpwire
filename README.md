@@ -41,7 +41,7 @@ JumpWire works directly with the database protocol. All standard clients work wi
 
 When a client attempts to connect through the proxy without credentials, a magic login link is generated. Using the [jwctl CLI](https://github.com/extragoodlabs/jwctl) or an integration available with JumpWire Enterprise, the login attempt can be linked to an SSO user and associated permissions.
 
-![DB Authorization Architecture](images/DB Authorization Architecture.png)
+![DB Authorization Architecture](./images/DB Authorization Architecture.png)
 
 ## Installation
 
