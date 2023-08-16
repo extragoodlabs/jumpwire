@@ -1,0 +1,333 @@
+defmodule JumpWire.Proxy.SQL.Parser do
+  @moduledoc """
+  Parse a string containing a SQL query into an AST.
+  """
+
+  use Rustler, otp_app: :jumpwire, crate: :jumpwire_proxy_sql_parser
+  alias JumpWire.Proxy.SQL.{Statement, Value, Field}
+  alias JumpWire.Proxy.SQL.Statement.Ident
+  alias JumpWire.Proxy.Request
+  require Logger
+
+  defmodule Traveler do
+    @moduledoc """
+    Structure for accumulating information about a SQL query as it is traversed.
+    """
+
+    use TypedStruct
+    alias JumpWire.Proxy.Request
+
+    typedstruct do
+      field :request, Request.t(), default: %Request{}
+      field :op, :select | :update | :delete | :insert, enforce: true
+      field :schema, String.t()
+      field :table, String.t()
+      field :table_aliases, map(), default: %{}
+    end
+
+    def get_table_alias(acc, field = %{schema: nil}) do
+      Map.get(acc.table_aliases, field.table)
+    end
+    def get_table_alias(_acc, _field), do: nil
+
+    def put_field(acc, field) do
+      {schema, table} =
+        with nil <- get_table_alias(acc, field) do
+          schema = field.schema || acc.schema
+          table = field.table || acc.table
+          {schema, table}
+        end
+
+      field = %{field | schema: schema, table: table}
+      Map.update!(acc, :request, fn req ->
+        Request.put_field(req, acc.op, field)
+      end)
+    end
+  end
+
+  def parse_postgresql(_query), do: :erlang.nif_error(:nif_not_loaded)
+
+  @doc """
+  Take a SQL AST and convert it to a request object for processing.
+
+  All fields that are accessed are recorded in the request.
+  """
+  def to_request(query = %Statement.Query{}) do
+    acc = %Traveler{op: :select}
+    |> find_fields(query)
+
+    {:ok, acc.request}
+  end
+
+  def to_request(statement = %Statement.Update{}) do
+    acc = %Traveler{op: :select}
+    |> find_table(statement.table)
+    |> find_fields(statement.selection)
+
+    acc = Enum.reduce(statement.assignments, acc, fn assignment, acc ->
+      acc
+      |> Map.put(:op, :update)
+      |> find_fields(assignment)
+    end)
+
+    {:ok, acc.request}
+  end
+
+  def to_request(statement = %Statement.Delete{}) do
+    acc = %Traveler{op: :select}
+    |> find_table(statement.from)
+    |> find_fields(statement.from)
+    |> find_fields(statement.selection)
+
+    # all fields on the table should be considered deleted
+    acc = acc
+    |> Map.put(:op, :delete)
+    |> Traveler.put_field(%Field{column: :wildcard})
+
+    {:ok, acc.request}
+  end
+
+  def to_request(statement = %Statement.Insert{}) do
+    acc = %Traveler{op: :insert}
+    |> find_table(statement.table_name)
+    |> find_fields(statement.source)
+    |> Map.put(:op, :select)
+    |> find_fields(statement.returning)
+    |> Map.put(:op, :insert)
+
+    # parse inserts without explicit columns
+    declared_field_count = Enum.count(statement.columns)
+    max_field_count =
+      case statement.source.body do
+        %Statement.Values{rows: rows} ->
+          rows
+          |> Stream.map(&Enum.count/1)
+          |> Enum.max()
+
+        _ -> 0
+      end
+
+    acc =
+      if max_field_count > declared_field_count do
+        # this doesn't cover the edge case of inserting only some columns
+        # eg, the table declares (a, b, c) but the query only inserts
+        # (a, b)
+        Traveler.put_field(acc, %Field{column: :wildcard})
+      else
+        Enum.reduce(statement.columns, acc, fn col, acc ->
+          find_fields(acc, col)
+        end)
+      end
+
+    {:ok, acc.request}
+  end
+
+  def to_request(_), do: {:error, :invalid}
+
+  def find_fields(acc, query = %Statement.Query{body: select = %Statement.Select{}}) do
+    %{op: op, table: table, schema: schema} = acc
+    acc = acc
+    |> find_table(select.from)
+    |> Map.put(:op, :select)
+    |> find_fields(select.from)
+    |> find_fields(query.with)
+
+    select.projection
+    |> Enum.reduce(acc, fn name, acc ->
+      find_fields(acc, name)
+    end)
+    |> find_fields(select.selection)
+    |> Map.put(:op, op)
+    |> Map.put(:schema, schema)
+    |> Map.put(:table, table)
+  end
+
+  def find_fields(acc, query = %Statement.Query{body: %Statement.Values{}}) do
+    find_fields(acc, query.with)
+  end
+
+  def find_fields(acc, %Statement.With{cte_tables: tables}) do
+    Enum.reduce(tables, acc, fn table, acc -> find_fields(acc, table) end)
+  end
+
+  def find_fields(acc, cte = %Statement.Cte{}) do
+    acc
+    |> find_table(cte.from)
+    |> find_fields(cte.query)
+  end
+
+  def find_fields(acc, %Statement.BinaryOp{left: left, right: right}) do
+    op = acc.op
+    acc
+    |> find_fields(left)
+    |> Map.put(:op, :select)
+    |> find_fields(right)
+    |> Map.put(:op, op)
+  end
+
+  def find_fields(acc, %Statement.UnaryOp{expr: expr}) do
+    find_fields(acc, expr)
+  end
+
+  def find_fields(acc, %Statement.Exists{subquery: query}) do
+    find_fields(acc, query)
+  end
+
+  def find_fields(acc, %Statement.InList{expr: expr, list: values}) do
+    Enum.reduce(values, acc, fn val, acc ->
+      find_fields(acc, val)
+    end)
+    |> find_fields(expr)
+  end
+
+  def find_fields(acc, %Statement.Like{expr: expr}) do
+    find_fields(acc, expr)
+  end
+
+  def find_fields(acc, %Statement.ILike{expr: expr}) do
+    find_fields(acc, expr)
+  end
+
+  def find_fields(acc, %Statement.Assignment{value: value, id: idents}) do
+    %{op: op, table: table, schema: schema} = acc
+    acc
+    |> Map.put(:op, :select)
+    # assignments across joins are ambiguous without knowing the full
+    # schema
+    |> Map.put(:schema, nil)
+    |> Map.put(:table, nil)
+    |> find_fields(value)
+    |> Map.put(:op, op)
+    |> Map.put(:schema, schema)
+    |> Map.put(:table, table)
+    |> find_fields(idents)
+  end
+
+  def find_fields(acc, %Statement.Function{args: args}) do
+    Enum.reduce(args, acc, fn arg, acc ->
+      find_fields(acc, arg)
+    end)
+  end
+
+  def find_fields(acc, %Statement.Case{conditions: conditions, results: results, else_result: else_result}) do
+    Stream.concat(conditions, results)
+    |> Enum.reduce(acc, fn c, acc -> find_fields(acc, c) end)
+    |> find_fields(else_result)
+  end
+
+  def find_fields(acc, %Statement.WildcardAdditionalOptions{}) do
+    Traveler.put_field(acc, %Field{column: :wildcard})
+  end
+
+  def find_fields(acc, %Statement.ExprWithAlias{expr: expr}) do
+    find_fields(acc, expr)
+  end
+
+  def find_fields(acc, %Statement.TableWithJoins{joins: joins}) do
+    Enum.reduce(joins, acc, fn join, acc -> find_fields(acc, join) end)
+  end
+
+  def find_fields(acc, %Statement.Join{join_operator: :none}), do: acc
+  def find_fields(acc, %Statement.Join{join_operator: :natural}), do: acc
+  def find_fields(acc, %Statement.Join{join_operator: expr}) do
+    find_fields(acc, expr)
+  end
+
+  def find_fields(acc, %Ident{value: value}) do
+    Traveler.put_field(acc, %Field{column: value})
+  end
+  def find_fields(acc, [%Ident{value: value}]) do
+    Traveler.put_field(acc, %Field{column: value})
+  end
+  def find_fields(acc, [%Ident{value: table}, %Ident{value: col}]) do
+    field = %Field{column: col, table: table}
+    Traveler.put_field(acc, field)
+  end
+  def find_fields(acc, [%Ident{value: schema}, %Ident{value: table}, %Ident{value: col}]) do
+    field = %Field{column: col, table: table, schema: schema}
+    Traveler.put_field(acc, field)
+  end
+
+  def find_fields(acc, {:qualified_wildcard, name, _options}) do
+    acc
+    |> find_table(name)
+    |> Traveler.put_field(%Field{column: :wildcard})
+  end
+
+  def find_fields(acc, index = %Statement.ArrayIndex{}) do
+    index.indexes
+    |> Enum.reduce(acc, fn i, acc -> find_fields(acc, i) end)
+    |> find_fields(index.obj)
+  end
+
+  def find_fields(acc, %Statement.ArrayAgg{expr: expr, order_by: order_by}) do
+    order_by
+    |> Enum.reduce(acc, fn order, acc -> find_fields(acc, order.expr) end)
+    |> find_fields(expr)
+  end
+
+  def find_fields(acc, [expr]), do: find_fields(acc, expr)
+
+  def find_fields(acc, []), do: acc
+
+  def find_fields(acc, nil), do: acc
+
+  def find_fields(acc, data) when is_binary(data), do: acc
+
+  def find_fields(acc, statement) do
+    case Value.from_expr(statement) do
+      {:ok, _value} -> acc
+      _ ->
+        Logger.warn("Unsupported statement: #{inspect statement}")
+
+        [
+          [%Ident{quote_style: nil, value: "r"}, %Ident{quote_style: nil, value: "rngsubtype"}],
+          {:number, "0", false}
+        ]
+
+
+        acc
+    end
+  end
+
+  def find_table(acc, [table]), do: find_table(acc, table)
+
+  def find_table(acc, %Statement.Join{relation: relation}) do
+    find_table(acc, relation)
+  end
+
+
+  def find_table(acc, %Statement.TableWithJoins{relation: table, joins: joins}) do
+    joins
+    |> Enum.reduce(acc, fn join, acc -> find_table(acc, join) end)
+    |> find_table(table)
+  end
+
+  def find_table(acc, %Statement.Table{name: name, alias: alias}) do
+    {schema, table} =
+      case name do
+        [%Ident{value: table}] -> {nil, table}
+        [%Ident{value: schema}, %Ident{value: table}] -> {schema, table}
+      end
+
+    # check if the table name is aliased and save it if so
+    acc =
+      case alias do
+        %Statement.TableAlias{name: %Ident{value: alias_name}} ->
+          Map.update!(acc, :table_aliases, fn aliases ->
+            Map.put(aliases, alias_name, {schema, table})
+          end)
+
+        nil -> acc
+      end
+
+    %{acc | schema: schema, table: table}
+  end
+  def find_table(acc, %Ident{value: table}) do
+    %{acc | table: table}
+  end
+  def find_table(acc, [%Ident{value: schema}, %Ident{value: table}]) do
+    %{acc | schema: schema, table: table}
+  end
+  def find_table(acc, _), do: %{acc | schema: nil, table: nil}
+end

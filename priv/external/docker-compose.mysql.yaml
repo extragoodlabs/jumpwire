@@ -1,0 +1,16 @@
+version: "3"
+
+services:
+  mysql:
+    image: mysql:8-debian
+    ports:
+      - 3306:3306
+    environment:
+      MYSQL_DATABASE: jumpwire_test
+      MYSQL_ROOT_PASSWORD: root
+    command:
+      - --ssl-ca=/etc/ssl/certs/local/minica.pem
+      - --ssl-cert=/etc/ssl/certs/local/localhost.crt
+      - --ssl-key=/etc/ssl/certs/local/localhost.key
+    volumes:
+      - ./../cert:/etc/ssl/certs/local

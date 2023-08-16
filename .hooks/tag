@@ -1,0 +1,10 @@
+#!/bin/bash
+
+version=$(git diff HEAD^ HEAD -U0 mix.exs | grep -E '^\+\s*@version' | awk '{print $3}' | tr -d \")
+
+if [ -z "${version}" ]; then
+    exit 0
+fi
+
+echo "Version was updated to ${version}, creating git tag"
+git tag -f "${version}" -a -m "Version ${version}"

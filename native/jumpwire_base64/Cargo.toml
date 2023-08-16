@@ -1,0 +1,14 @@
+[package]
+name = "jumpwire_base64"
+version = "0.1.0"
+authors = []
+edition = "2018"
+
+[lib]
+name = "jumpwire_base64"
+path = "src/lib.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+rustler = "0.27.0"
+base64 = "0.13.0"

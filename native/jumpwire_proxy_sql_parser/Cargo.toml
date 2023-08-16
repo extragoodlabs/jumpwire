@@ -1,0 +1,16 @@
+[package]
+name = "jumpwire_proxy_sql_parser"
+version = "0.1.0"
+authors = []
+edition = "2021"
+
+[lib]
+name = "jumpwire_proxy_sql_parser"
+path = "src/lib.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+rustler = "0.27.0"
+sqlparser = { version = "0.34.0", features = ["serde"] }
+serde = "1.0"
+serde_rustler = { git = "https://github.com/jumpwire-ai/serde_rustler" }

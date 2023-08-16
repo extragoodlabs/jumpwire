@@ -1,0 +1,127 @@
+global:
+  sync: true
+  merge: all
+
+manifests:
+  - id: 0779b97a-c04a-48f9-9483-22e8b0487de4
+    name: api db
+    root_type: postgresql
+    credentials:
+      username: apiuser
+      password: apipassword
+    configuration:
+      type: postgresql
+      database: db
+      ssl: false
+      hostname: api_db
+      port: 5432
+
+metastores:
+  - id: cb48a801-389b-4844-89e7-2b41e88317af
+    name: eu pii db
+    configuration:
+      type: postgresql_kv
+      connection:
+        hostname: pii_eu_db
+        port: 5432
+        database: db
+        ssl: false
+      table: pii
+      key_field: key
+      value_field: value
+    credentials:
+      username: piiuser
+      password: piipassword
+  - id: 559c0fd7-dd28-456e-9e02-890fcc912977
+    name: uk pii db
+    configuration:
+      type: postgresql_kv
+      connection:
+        hostname: pii_uk_db
+        port: 5432
+        database: db
+        ssl: false
+      table: pii
+      key_field: key
+      value_field: value
+    credentials:
+      username: piiuser
+      password: piipassword
+  - id: 6db2d212-216b-4710-bc99-00ec63601840
+    name: us pii db
+    configuration:
+      type: postgresql_kv
+      connection:
+        hostname: pii_us_db
+        port: 5432
+        database: db
+        ssl: false
+      table: pii
+      key_field: key
+      value_field: value
+    credentials:
+      username: piiuser
+      password: piipassword
+
+policies:
+  - id: d86448be-db98-4ec5-a635-576829e05ec7
+    version: 2
+    name: resolve eu pii
+    handling: resolve_fields
+    label: pii
+    configuration:
+      type: resolve_fields
+      metastore_id: cb48a801-389b-4844-89e7-2b41e88317af
+      route_key: country_code
+      route_values: ['DE', 'FR', 'GE']
+  - id: 69165a17-8560-47f4-82b2-43c7346d23f6
+    version: 2
+    name: resolve uk pii
+    handling: resolve_fields
+    label: pii
+    configuration:
+      type: resolve_fields
+      metastore_id: 559c0fd7-dd28-456e-9e02-890fcc912977
+      route_key: country_code
+      route_values: ['GB']
+  - id: 6c33d804-5276-44d0-b63f-14aa82a415a4
+    version: 2
+    name: resolve us pii
+    handling: resolve_fields
+    label: pii
+    configuration:
+      type: resolve_fields
+      metastore_id: 6db2d212-216b-4710-bc99-00ec63601840
+      route_key: country_code
+      route_values: ['US']
+
+client_auth:
+  - id: 20fe7ce9-e304-444a-94a4-3ab7045b6d78
+    name: client
+    attributes:
+      - classification:Internal
+    manifest_id: 0779b97a-c04a-48f9-9483-22e8b0487de4
+
+proxy_schemas:
+  - id: f764dd5b-fb38-401a-b414-edfa8230fd11
+    name: sessions
+    manifest_id: 0779b97a-c04a-48f9-9483-22e8b0487de4
+    fields:
+      schedule_date_and_time: pii
+      name: pii
+  - id: 618740c0-bd81-42c9-99c9-a9fe21e8c13c
+    name: countries
+    manifest_id: 0779b97a-c04a-48f9-9483-22e8b0487de4
+    fields:
+      iso_code: country_code
+
+groups:
+  engineers:
+    source: jumpwire  # optional
+    members:
+      - foo@bar.com
+    permissions:
+      - select:pii
+      - insert:pii
+      - update:pii
+      - select:sensitive
