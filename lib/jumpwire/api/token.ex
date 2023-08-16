@@ -102,8 +102,15 @@ defmodule JumpWire.API.Token do
   Generate a new root token and persist it.
   """
   def generate_root_token() do
-    token = :crypto.strong_rand_bytes(32) |> JumpWire.Base64.encode()
+    token = :crypto.strong_rand_bytes(64)
+    |> JumpWire.Base64.encode()
+    |> binary_part(0, 64)
+
     Application.put_env(:jumpwire, :signing_token, token, persistent: true)
+    case Application.get_env(:jumpwire, :proxy)[:secret_key] do
+      nil -> JumpWire.update_env(:proxy, :secret_key, token)
+      _ -> nil
+    end
     token
   end
 

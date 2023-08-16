@@ -57,11 +57,12 @@ defmodule JumpWire do
     Application.put_env(:jumpwire, key, opts, persistent: true)
   end
 
-  @spec validate_config() :: :ok | {:error, any}
+  @spec validate_config() :: {:ok, [{String.t, String.t}]} | {:error, any}
   def validate_config() do
-    with key <- Application.get_env(:jumpwire, :proxy)[:secret_key],
+    with {:ok, msgs} <- initialize_root_token(),
+         key = Application.get_env(:jumpwire, :proxy)[:secret_key],
          :ok <- check_nil(key, "token signing key") do
-      initialize_root_token()
+      {:ok, msgs}
     end
   end
 

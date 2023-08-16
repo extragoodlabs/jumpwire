@@ -298,6 +298,13 @@ end
 
 with {:ok, token} <- System.fetch_env("JUMPWIRE_ROOT_TOKEN") do
   config :jumpwire, signing_token: token
+
+  # use the same key for signing tokens by default
+  config :jumpwire, :proxy, secret_key: token
+end
+
+with {:ok, key} <- System.fetch_env("JUMPWIRE_TOKEN_KEY") do
+  config :jumpwire, :proxy, secret_key: key
 end
 
 with {:ok, path} <- System.fetch_env("JUMPWIRE_SSO_METADATA_PATH"),
