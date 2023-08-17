@@ -136,10 +136,9 @@ defmodule JumpWire.MixProject do
 
   defp aliases do
     [
-      "release.all": ["release.in_docker", "release.docker_image", "release.aws"],
+      "release.all": ["release.in_docker", "release.docker_image"],
       "release.in_docker": "cmd DOCKER_BUILDKIT=1 docker build . -o release",
       "release.docker_image": "cmd docker build -t #{@docker_image}:#{@version} -t #{@docker_image}:latest release",
-      "run.prod": "cmd priv/mix_run_prod.sh",
     ]
   end
 

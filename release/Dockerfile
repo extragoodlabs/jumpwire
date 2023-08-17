@@ -16,7 +16,7 @@ RUN \
     -h "/opt/jumpwire" \
     -D "${USER}"
 
-RUN apk add --update --no-cache bash curl jq sudo
+RUN apk add --update --no-cache libstdc++ bash curl jq sudo
 
 WORKDIR /opt/jumpwire
 
