@@ -42,6 +42,8 @@ config :jumpwire, JumpWire.Cloak.KeyRing,
   default_org: "jumpwire_test",
   managed_keys: false
 
+config :jumpwire, :metadata, org_id: "jumpwire_test"
+
 config :jumpwire, :pebble, server: true
 config :jumpwire, :acme,
   directory_url: "https://localhost:14000/dir",
