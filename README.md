@@ -47,8 +47,6 @@ When a client attempts to connect through the proxy without credentials, a magic
 
 JumpWire is packages as Docker image and doesn't have any hard dependencies (beside the database being proxied, of course). The image is hosted on [GitHub Packages](https://github.com/extragoodlabs/jumpwire/pkgs/container/jumpwire)
 
-jumpwire.yaml
-
 Create a configuration file called `jumpwire.yaml`. The following example configures JumpWire to proxy through to a PostgreSQL server running on the local host with a database named `test_db` and a table named `users`:
 
 ```yaml
@@ -95,7 +93,7 @@ Start the JumpWire engine:
 ``` shell
 export ENCRYPTION_KEY=$(openssl rand -base64 32)
 docker run -d --name jumpwire \
-  -p 4004:4004 -p 4443:4443 -p 3307:3307 -p 6432:6432 \
+  -p 4004:4004 -p 4443:4443 -p 3306:3306 -p 6432:5432 \
   -v $(pwd)/jumpwire.yaml:/etc/jumpwire/jumpwire.yaml \
   -e JUMPWIRE_CONFIG_PATH=/etc/jumpwire \
   -e JUMPWIRE_ENCRYPTION_KEY="${ENCRYPTION_KEY}" \
@@ -115,8 +113,8 @@ The following ports are used by default:
 - `4004` - HTTP server for JSON API requests
 - `4443` - HTTPS server for JSON API requests
 - `9568` - HTTP server exposing metrics in Prometheus format
-- `6432` - client connections for PostgreSQL
-- `3307` - client connections for MySQL
+- `5432` - client connections for PostgreSQL
+- `3306` - client connections for MySQL
 
 These can be configured as noted below.
 
@@ -143,8 +141,8 @@ The available configuration options are detailed in [our documentation](https://
 | JUMPWIRE_HTTP_PORT | 4004 | Port to listen for HTTP request. |
 | JUMPWIRE_HTTPS_PORT | 4443 | Port to listen for HTTPS request. |
 | JUMPWIRE_PROMETHEUS_PORT | 9568 | Port to serve Prometheus stats on, under the `/metrics` endpoint. |
-| JUMPWIRE_POSTGRES_PROXY_PORT | 6432 | Port to listen for incoming postgres clients |
-| JUMPWIRE_MYSQL_PROXY_PORT | 3307 | Port to listen for incoming mysql clients. |
+| JUMPWIRE_POSTGRES_PROXY_PORT | 5432 | Port to listen for incoming postgres clients |
+| JUMPWIRE_MYSQL_PROXY_PORT | 3306 | Port to listen for incoming mysql clients. |
 | JUMPWIRE_TLS_CERT | - | Public cert to use for HTTPS |
 | JUMPWIRE_TLS_KEY | - | Private key to use for HTTPS |
 | JUMPWIRE_TLS_CA | [CAStore](https://github.com/elixir-mint/castore) | CA cert bundle to use for HTTPS |
