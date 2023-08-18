@@ -100,14 +100,11 @@ defmodule JumpWire.Websocket do
     new_topic_state() |> Map.put(:org_id, org_id)
   end
 
-  def init(%{url: nil} = opts) do
+  def init(%{url: nil}) do
     Logger.debug("Websocket connection to frontend disabled")
-    with {:ok, token} <- Map.fetch(opts, :token),
-         {:ok, %{org: org_id}} <- JumpWire.token_claims(token) do
-      JumpWire.Vault.load_keys(org_id)
-      JumpWire.ConfigLoader.load(org_id)
-    end
-
+    # Load local config. This is done in the Websocket module to ensure it gets merged in when
+    # a websocket connection is established.
+    JumpWire.Metadata.get_org_id() |> JumpWire.ConfigLoader.load()
     :ignore
   end
   def init(%{params: params, token: token, url: url}) do
