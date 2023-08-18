@@ -67,6 +67,54 @@ defmodule JumpWire.RouterTest do
     assert body == %{"id" => id, "permissions" => permissions}
   end
 
+  describe "client_auth" do
+    setup do
+      org_id = JumpWire.Metadata.get_org_id()
+      manifest_id = Uniq.UUID.uuid4()
+      {client, _token} = JumpWire.Phony.generate_client_auth({org_id, manifest_id}, nil)
+      token = JumpWire.API.Token.get_root_token()
+      %{client: client, token: token}
+    end
+
+    test "can be signed on fetched", %{client: client, token: token} do
+      conn = conn(:get, "/api/v1/client/#{client.id}")
+      |> put_auth_header(token)
+      |> Router.call(@opts)
+
+      assert conn.status == 200
+      assert {:ok, body} = Jason.decode(conn.resp_body)
+      assert body == %{
+        "id" => client.id,
+        "organization_id" => "jumpwire_test",
+        "manifest_id" => client.manifest_id,
+        "name" => client.name,
+        "attributes" => [],
+      }
+    end
+
+    test "can be signed on demand", %{client: client, token: token} do
+      conn = conn(:put, "/api/v1/client/#{client.id}/token")
+      |> put_auth_header(token)
+      |> Router.call(@opts)
+
+      assert conn.status == 200
+      assert {:ok, %{"token" => client_token}} = Jason.decode(conn.resp_body)
+      assert {:ok, {"jumpwire_test", client.id}} == JumpWire.Proxy.verify_token(client_token)
+    end
+
+    test "can be signed with a custom ttl", %{client: client, token: token} do
+      conn = conn(:put, "/api/v1/client/#{client.id}/token?ttl=1")
+      |> put_auth_header(token)
+      |> Router.call(@opts)
+
+      assert conn.status == 200
+      assert {:ok, %{"token" => client_token}} = Jason.decode(conn.resp_body)
+      assert {:ok, {"jumpwire_test", client.id}} == JumpWire.Proxy.verify_token(client_token)
+      :timer.sleep(1000)
+      assert {:error, :expired} == JumpWire.Proxy.verify_token(client_token)
+    end
+  end
+
   defp put_auth_header(conn, token) do
     put_req_header(conn, "authorization", "Bearer #{token}")
   end

@@ -88,6 +88,38 @@ defmodule JumpWire.API.Router do
     end
   end
 
+  get "/client/:id" do
+    org_id = JumpWire.Metadata.get_org_id()
+    case JumpWire.ClientAuth.fetch(org_id, id) do
+      {:ok, client} ->
+        client = Map.take(client, [:id, :attributes, :manifest_id, :name, :organization_id])
+        send_json_resp(conn, 200, client)
+
+      err ->
+        Logger.error("Could not retrieve client_auth: #{inspect err}")
+        send_json_resp(conn, 400, %{error: "Invalid client ID"})
+    end
+  end
+
+  put "/client/:id/token" do
+    org_id = JumpWire.Metadata.get_org_id()
+    opts =
+      case Map.get(conn.params, "ttl", "") |> Integer.parse() do
+        {ttl, ""} -> [ttl: ttl]
+        _ -> []
+      end
+
+    case JumpWire.ClientAuth.fetch(org_id, id) do
+      {:ok, client} ->
+        token = JumpWire.Proxy.sign_token(org_id, client.id, opts)
+        send_json_resp(conn, 200, %{token: token, id: client.id, manifest_id: client.manifest_id})
+
+      err ->
+        Logger.error("Could not retrieve client_auth: #{inspect err}")
+        send_json_resp(conn, 400, %{error: "Invalid client ID"})
+    end
+  end
+
   match "/*glob", via: [:get, :post, :put] do
     send_json_resp(conn, 421, %{error: "reserved path"})
   end

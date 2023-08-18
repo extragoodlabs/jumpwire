@@ -5,6 +5,23 @@ defmodule JumpWire.Proxy do
   @token_max_age 86_400 * 3650
 
   @doc """
+  Create a signed token used for authenticating a proxy client.
+  """
+  @type signing_opts() :: [ttl: integer()]
+  @spec sign_token(String.t(), String.t(), opts :: signing_opts()) :: String.t()
+  def sign_token(org_id, client_id, opts \\ []) do
+    Application.get_env(:jumpwire, :proxy, [])
+    |> Keyword.get(:secret_key)
+    |> sign_token(org_id, client_id, opts)
+  end
+
+  @spec sign_token(String.t(), String.t(), String.t(), signing_opts()) :: String.t()
+  def sign_token(secret, org_id, client_id, opts) do
+    ttl = Keyword.get(opts, :ttl) || @token_max_age
+    Plug.Crypto.sign(secret, "manifest", {org_id, client_id}, max_age: ttl)
+  end
+
+  @doc """
   Checks a token used for authentication. If the token is valid, the manifest ID will be returned.
   """
   @spec verify_token(String.t()) :: {:ok, {String.t(), String.t()}} | {:error, atom}
@@ -16,7 +33,7 @@ defmodule JumpWire.Proxy do
 
   @spec verify_token(String.t, String.t) :: {:ok, {String.t(), String.t()}} | {:error, atom}
   def verify_token(secret, token) do
-    Plug.Crypto.verify(secret, "manifest", token, max_age: @token_max_age)
+    Plug.Crypto.verify(secret, "manifest", token)
   end
 
   @doc """
