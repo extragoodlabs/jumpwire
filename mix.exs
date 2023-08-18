@@ -119,6 +119,7 @@ defmodule JumpWire.MixProject do
 
       # test and local dev tools
       {:mox, "~> 1.0", only: :test},
+      {:mock, "~> 0.3.8", only: :test},
       {:git_hooks, "~> 0.6.3", only: :dev, runtime: false},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.0", only: [:dev], runtime: false},

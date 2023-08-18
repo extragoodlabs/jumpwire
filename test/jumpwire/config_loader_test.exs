@@ -1,8 +1,18 @@
 defmodule JumpWire.ConfigLoaderTest do
   use ExUnit.Case, async: false
   alias JumpWire.ConfigLoader
+  import Mock
 
   @fixture_dir "priv/fixtures/test-config"
+
+  setup_with_mocks([
+    {JumpWire.Manifest, [:passthrough], [hook: fn _, :insert -> Task.completed(:ok) end]},
+    {JumpWire.Proxy.Schema, [:passthrough], [hook: fn _, :insert -> Task.completed(:ok) end]},
+    {JumpWire.Policy, [:passthrough], [hook: fn _, :insert -> Task.completed(:ok) end]},
+    {JumpWire.Group, [:passthrough], [hook: fn _, :insert -> Task.completed(:ok) end]},
+  ]) do
+    :ok
+  end
 
   test "loading manifests from a yaml file" do
     org_id = Faker.UUID.v4()

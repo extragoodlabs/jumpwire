@@ -28,11 +28,11 @@ defmodule JumpWire.ConfigLoader do
     |> Enum.reduce(%{}, fn data, acc ->
       case mod.from_json(data, org_id) do
         {:ok, value = %JumpWire.Proxy.Schema{}} ->
-          mod.hook(value, :insert)
+          mod.hook(value, :insert) |> Task.await()
           Map.put(acc, {org_id, value.manifest_id, value.id}, value)
 
         {:ok, value} ->
-          mod.hook(value, :insert)
+          mod.hook(value, :insert) |> Task.await()
           Map.put(acc, {org_id, value.id}, value)
 
         {:error, err} ->

@@ -104,7 +104,11 @@ defmodule JumpWire.Websocket do
     Logger.debug("Websocket connection to frontend disabled")
     # Load local config. This is done in the Websocket module to ensure it gets merged in when
     # a websocket connection is established.
-    JumpWire.Metadata.get_org_id() |> JumpWire.ConfigLoader.load()
+    # It can take some time for hooks to run on manifests/schemas, so we run the loader in its own
+    # process and let the Websocket finish.
+    Task.Supervisor.async_nolink(JumpWire.ProxySupervisor, fn ->
+      JumpWire.Metadata.get_org_id() |> JumpWire.ConfigLoader.load()
+    end)
     :ignore
   end
   def init(%{params: params, token: token, url: url}) do

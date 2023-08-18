@@ -423,8 +423,6 @@ defmodule JumpWire.Proxy.Postgres.Setup do
   @spec enable_table(pid, JumpWire.Proxy.Schema.t(), [String.t()]) :: {:ok, any} | {:error, any}
   def enable_table(conn, schema = %Schema{}, labels) when is_pid(conn) do
     Postgrex.transaction(conn, fn conn ->
-      # WARNING: this is a potential SQL injection!
-      # for some reason paramerizing the table name causes a syntax error
       with {:ok, _} <- Postgrex.query(conn, "DROP TRIGGER IF EXISTS jumpwireEncrypt ON #{schema.name};", []),
            {:ok, _} <- Postgrex.query(conn, "DROP TRIGGER IF EXISTS jumpwireTokenize ON #{schema.name};", []),
            {:ok, _} <- Postgrex.query(conn, "DELETE FROM jumpwire_proxy_schema_fields WHERE table_name = $1;", [schema.name]),
