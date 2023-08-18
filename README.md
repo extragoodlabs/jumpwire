@@ -53,7 +53,7 @@ Create a configuration file called `jumpwire.yaml`. The following example config
 
 ```yaml
 # configure a postgresql database
-manifest:
+manifests:
 - id: 0779b97a-c04a-48f9-9483-22e8b0487de4
   name: my local db
   root_type: postgresql
@@ -68,7 +68,7 @@ manifest:
     port: 5432
 
 # set labels on fields
-proxy_schema:
+proxy_schemas:
   - id: f764dd5b-fb38-401a-b414-edfa8230fd11
     name: users
     # must match the ID set for PostgreSQL
