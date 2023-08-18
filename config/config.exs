@@ -85,7 +85,7 @@ config :logger, Sentry.LoggerBackend,
 
 config :jumpwire, JumpWire.Cloak.KeyRing,
   storage_adapters: [{JumpWire.Cloak.Storage.DeltaCrdt, true}],
-  managed_keys: true
+  managed_keys: false
 
 config :hydrax, JumpWire.Cloak.Storage.DeltaCrdt, storage_module: JumpWire.Cloak.Storage.DeltaCrdt.DiskStorage
 config :hydrax, JumpWire.Cloak.Storage.DeltaCrdt.DiskStorage, filename: 'jumpwire_keys'

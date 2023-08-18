@@ -47,7 +47,13 @@ defmodule JumpWire.Cloak.KeyRing do
     |> JumpWire.Cloak.Storage.load_keys()
 
     state = Keyword.put(state, :ciphers, ciphers)
-    {:ok, state}
+    {:ok, state, {:continue, :load_default_org}}
+  end
+
+  @impl GenServer
+  def handle_continue(:load_default_org, state) do
+    state = JumpWire.Metadata.get_org_id() |> load_keys(state)
+    {:noreply, state}
   end
 
   @impl GenServer
@@ -111,36 +117,8 @@ defmodule JumpWire.Cloak.KeyRing do
 
   @impl GenServer
   def handle_call({:load_keys, org_id}, _from, config) do
-    JumpWire.Tracer.context(org_id: org_id)
-    if is_nil get_in(config, [:ciphers, org_id]) do
-      Logger.info("Loading encryption keys")
-      managed_keys = Keyword.get(config, :managed_keys, true)
-      ciphers = config
-      |> JumpWire.Cloak.Storage.load_keys(org_id)
-      |> lazy_key_gen(config, managed_keys)
-
-      # Reuse the default AES key for CBC and ECB encryption modes
-      ciphers =
-        case Keyword.fetch(ciphers, :aes) do
-          {:ok, aes} ->
-            ciphers
-            |> Keyword.put_new_lazy(:aes_cbc, fn -> Keys.aes_cbc_config(aes) end)
-            |> Keyword.put_new_lazy(:aes_ecb, fn -> Keys.aes_ecb_config(aes) end)
-
-          _ ->
-            ciphers
-        end
-
-      config = put_in(config, [:ciphers, org_id], ciphers)
-
-      # Ensure that the configuration is saved
-      JumpWire.Cloak.Storage.save_keys(config, org_id)
-
-      {:reply, :ok, config}
-    else
-      Logger.debug("Keys already loaded, skipping")
-      {:reply, :ok, config}
-    end
+    config = load_keys(org_id, config)
+    {:reply, :ok, config}
   end
 
   @impl GenServer
@@ -295,6 +273,39 @@ defmodule JumpWire.Cloak.KeyRing do
     case JumpWire.Vault.decode(key) do
       {:ok, [tag], _} -> tag
       _ -> :unknown
+    end
+  end
+
+  defp load_keys(org_id, config) do
+    JumpWire.Tracer.context(org_id: org_id)
+    if is_nil get_in(config, [:ciphers, org_id]) do
+      Logger.info("Loading encryption keys")
+      managed_keys = Keyword.fetch!(config, :managed_keys)
+      ciphers = config
+      |> JumpWire.Cloak.Storage.load_keys(org_id)
+      |> lazy_key_gen(config, managed_keys)
+
+      # Reuse the default AES key for CBC and ECB encryption modes
+      ciphers =
+        case Keyword.fetch(ciphers, :aes) do
+          {:ok, aes} ->
+            ciphers
+            |> Keyword.put_new_lazy(:aes_cbc, fn -> Keys.aes_cbc_config(aes) end)
+            |> Keyword.put_new_lazy(:aes_ecb, fn -> Keys.aes_ecb_config(aes) end)
+
+          _ ->
+            ciphers
+        end
+
+      config = put_in(config, [:ciphers, org_id], ciphers)
+
+      # Ensure that the configuration is saved
+      JumpWire.Cloak.Storage.save_keys(config, org_id)
+
+      config
+    else
+      Logger.debug("Keys already loaded, skipping")
+      config
     end
   end
 end

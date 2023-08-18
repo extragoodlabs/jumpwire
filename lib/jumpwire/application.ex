@@ -4,7 +4,7 @@ defmodule JumpWire.Application do
 
   Before starting the supervision tree, an HTTP request is made to the upstream controller. The response
   may contain encryption keys, feature flags, shared secrets, etc. If this connection fails and the JWT claims
-  do not allow for directly managing encryption keys (through the flag `managed_keys` which defaults to `true`),
+  do not allow for directly managing encryption keys (through the flag `managed_keys`),
   JumpWire will have no keys in its keyring and will not generate any new ones.
   """
 

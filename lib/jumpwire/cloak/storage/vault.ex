@@ -31,7 +31,7 @@ defmodule JumpWire.Cloak.Storage.Vault do
 
   @spec load_keys(Keyword.t, String.t, Vault.t) :: Keyword.t
   def load_keys(config, org_id, vault) do
-    if Keyword.get(config, :managed_keys, true) do
+    if config[:managed_keys] do
       Logger.info("Vault is configured but encryption keys are managed by the upstream controller")
       []
     else

@@ -305,6 +305,7 @@ end
 
 with {:ok, key} <- System.fetch_env("JUMPWIRE_TOKEN_KEY") do
   config :jumpwire, :proxy, secret_key: key
+  config :jumpwire, JumpWire.Cloak.KeyRing, managed_keys: true
 end
 
 with {:ok, path} <- System.fetch_env("JUMPWIRE_SSO_METADATA_PATH"),
