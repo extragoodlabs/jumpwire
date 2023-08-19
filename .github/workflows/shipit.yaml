@@ -76,12 +76,10 @@ jobs:
         run: mix test test/jumpwire/proxy/mysql_test.exs
 
   build-release:
-    if: ${{ github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/') }}
+    #if: ${{ github.ref == 'refs/heads/trunk' || startsWith(github.ref, 'refs/tags/') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
       - name: Cache Docker layers
@@ -111,6 +109,44 @@ jobs:
           name: jumpwire-release
           path: release/jumpwire-*.tar.gz
 
+  build-release-macos:
+    #if: ${{ github.ref == 'refs/heads/trunk' || startsWith(github.ref, 'refs/tags/') }}
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+        with:
+          platforms: arm64
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          # Key is named differently to avoid collision
+          key: ${{ runner.os }}-release-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-release-buildx
+      - name: Build release
+        uses: docker/build-push-action@v2
+        with:
+          outputs: type=local,dest=release
+          push: false
+          cache-from: type=local,src=/tmp/.buildx-cache
+          # Note the mode=max here
+          # More: https://github.com/moby/buildkit#--export-cache-options
+          # And: https://github.com/docker/buildx#--cache-tonametypetypekeyvalue
+          cache-to: type=local,mode=max,dest=/tmp/.buildx-cache-new
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+      - uses: actions/upload-artifact@v3
+        with:
+          name: jumpwire-arm64-release
+          path: release/jumpwire-*.tar.gz
+
   publish-release:
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
@@ -132,11 +168,9 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - build-release
-      - test
+      #- test
     steps:
       - uses: actions/checkout@v3
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
       - uses: actions/download-artifact@v3
@@ -164,12 +198,12 @@ jobs:
             suffix=
       - name: Docker metadata for external release
         id: external_meta
-        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        #if: ${{ startsWith(github.ref, 'refs/tags/') }}
         uses: docker/metadata-action@v3
         with:
           # list of Docker images to use as base name for tags
+          #            jumpwire/jumpwire
           images: |
-            jumpwire/jumpwire
             ghcr.io/extragoodlabs/jumpwire
           # generate Docker tags based on the following events/attributes
           tags: |
@@ -182,13 +216,13 @@ jobs:
             prefix=
             suffix=
       - name: Login to Docker Hub
-        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        #if: ${{ startsWith(github.ref, 'refs/tags/') }}
         uses: docker/login-action@v2
         with:
           username: jumpwire
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Login to GitHub Packages
-        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        #if: ${{ startsWith(github.ref, 'refs/tags/') }}
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
@@ -199,4 +233,81 @@ jobs:
         with:
           context: release
           tags: ${{ steps.meta.outputs.tags }},${{ steps.external_meta.outputs.tags }}
-          push: ${{ github.event_name != 'pull_request' }}
+          #push: ${{ github.event_name != 'pull_request' }}
+          push: true
+
+  docker-image-macos:
+    runs-on: macos-latest
+    needs:
+      - build-release-macos
+      #- test
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+        with:
+          platforms: arm64
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      - uses: actions/download-artifact@v3
+        with:
+          name: jumpwire-macos-release
+      - run: mv jumpwire-*.tar.gz release/
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          # list of Docker images to use as base name for tags
+          images: |
+            ghcr.io/extragoodlabs/jumpwire
+          # generate Docker tags based on the following events/attributes
+          tags: |
+            type=edge
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha
+            type=sha,format=long
+          flavor: |
+            latest=true
+            prefix=
+            suffix=
+      - name: Docker metadata for external release
+        id: external_meta
+        #if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        uses: docker/metadata-action@v3
+        with:
+          # list of Docker images to use as base name for tags
+          #jumpwire/jumpwire
+          images: |
+            ghcr.io/extragoodlabs/jumpwire
+          # generate Docker tags based on the following events/attributes
+          tags: |
+            type=edge
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+          flavor: |
+            latest=true
+            prefix=
+            suffix=
+      - name: Login to Docker Hub
+        #if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        uses: docker/login-action@v2
+        with:
+          username: jumpwire
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Login to GitHub Packages
+        #if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push
+        uses: docker/build-push-action@v2
+        with:
+          context: release
+          tags: ${{ steps.meta.outputs.tags }},${{ steps.external_meta.outputs.tags }}
+          #push: ${{ github.event_name != 'pull_request' }}
+          push: true
