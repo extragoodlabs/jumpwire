@@ -97,8 +97,8 @@ docker run -d --name jumpwire \
   -v $(pwd)/jumpwire.yaml:/etc/jumpwire/jumpwire.yaml \
   -e JUMPWIRE_CONFIG_PATH=/etc/jumpwire \
   -e JUMPWIRE_ENCRYPTION_KEY="${ENCRYPTION_KEY}" \
-  -e JUMPWIRE_POSTGRES_PROXY_PORT=6432
-  -e JUMPWIRE_MYSQL_PROXY_PORT=3307
+  -e JUMPWIRE_POSTGRES_PROXY_PORT=6432 \
+  -e JUMPWIRE_MYSQL_PROXY_PORT=3307 \
   ghcr.io/extragoodlabs/jumpwire:latest
 ```
 
