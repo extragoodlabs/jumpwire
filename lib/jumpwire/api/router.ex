@@ -120,8 +120,8 @@ defmodule JumpWire.API.Router do
     end
   end
 
-  match "/*glob", via: [:get, :post, :put] do
-    send_json_resp(conn, 421, %{error: "reserved path"})
+  match _ do
+    send_resp(conn, 404, %{error: "not found"})
   end
 
   @impl Plug.ErrorHandler

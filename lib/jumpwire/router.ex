@@ -37,4 +37,8 @@ defmodule JumpWire.Router do
   forward "/sso", to: JumpWire.SSO.Router
   forward "/tokens", to: JumpWire.Token.Router
   forward "/api/v1", to: JumpWire.API.Router
+
+  match _ do
+    send_resp(conn, 404, "not found")
+  end
 end
