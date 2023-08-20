@@ -33,8 +33,8 @@ defmodule JumpWire.Proxy.SQL.Parser do
     def put_field(acc, field) do
       {schema, table} =
         with nil <- get_table_alias(acc, field) do
-          schema = field.schema || acc.schema
           table = field.table || acc.table
+          schema = field.schema || acc.schema || JumpWire.Proxy.SQL.Parser.system_schema(table)
           {schema, table}
         end
 
@@ -46,6 +46,15 @@ defmodule JumpWire.Proxy.SQL.Parser do
   end
 
   def parse_postgresql(_query), do: :erlang.nif_error(:nif_not_loaded)
+
+  @doc """
+  In PostgreSQL, system tables names always being with `pg_`. Unqualified references will
+  resolve to system tables.
+
+  https://www.postgresql.org/docs/15/ddl-schemas.html
+  """
+  def system_schema("pg_" <> _), do: "pg_catalog"
+  def system_schema(_), do: nil
 
   @doc """
   Take a SQL AST and convert it to a request object for processing.
@@ -306,7 +315,7 @@ defmodule JumpWire.Proxy.SQL.Parser do
   def find_table(acc, %Statement.Table{name: name, alias: alias}) do
     {schema, table} =
       case name do
-        [%Ident{value: table}] -> {nil, table}
+        [%Ident{value: table}] -> {system_schema(table), table}
         [%Ident{value: schema}, %Ident{value: table}] -> {schema, table}
       end
 

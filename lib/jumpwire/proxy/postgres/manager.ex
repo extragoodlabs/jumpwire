@@ -130,22 +130,24 @@ defmodule JumpWire.Proxy.Postgres.Manager do
   @spec query_tables(pid(), Manifest.t()) :: map()
   def query_tables(conn, manifest) do
     namespace = Map.get(manifest.configuration, "schema", "public")
+    namespaces = [namespace, "pg_catalog"] |> MapSet.new() |> MapSet.to_list()
 
+    placeholders = namespaces |> Stream.with_index(1) |> Stream.map(fn {_, i} -> "$#{i}" end) |> Enum.join(",")
     query = """
-    SELECT pg_class.oid, table_name, column_name, ordinal_position
+    SELECT pg_class.oid, pg_namespace.nspname, table_name, column_name, ordinal_position
     FROM information_schema.columns
     INNER JOIN pg_class ON relname = table_name
     INNER JOIN pg_namespace ON pg_namespace.oid = pg_class.relnamespace
-    WHERE pg_class.relkind = 'r' AND pg_namespace.nspname = $1;
+    WHERE pg_class.relkind = 'r' AND pg_namespace.nspname IN (#{placeholders});
     """
 
-    case Postgrex.query(conn, query, [namespace]) do
+    case Postgrex.query(conn, query, namespaces) do
       {:ok, %{rows: rows}} ->
         rows
-        |> Stream.map(fn [id, name, column, column_id] ->
-          %{name: name, id: id, column: column, column_id: column_id}
+        |> Stream.map(fn [id, namespace, name, column, column_id] ->
+          %{name: name, namespace: namespace, id: id, column: column, column_id: column_id}
         end)
-        |> Enum.group_by(fn row -> row.name end)
+        |> Enum.group_by(fn row -> {row.namespace, row.name} end)
 
       err ->
         Logger.error("Failed to query postgres tables: #{inspect err}")
