@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM hexpm/elixir:1.14.5-erlang-25.3.2.4-alpine-3.18.2 as build-stage
+FROM ghcr.io/extragoodlabs/elixir:1.14.5-erlang-25.3.2.3-nojit-alpine-3.18.2 as build-stage
 
 # install build dependencies
 RUN apk add --no-cache build-base git curl wget openssh-client clang lld
@@ -19,8 +19,6 @@ WORKDIR /app
 
 RUN mix do local.hex --force, local.rebar --force
 
-FROM build-stage as release-stage
-
 COPY mix.exs .
 COPY mix.lock .
 
@@ -35,5 +33,38 @@ COPY rel ./rel/
 
 RUN mix release
 
-FROM scratch AS export-stage
-COPY --from=release-stage /app/_build/prod/jumpwire-*.tar.gz /
+FROM alpine:3.18.2 as final-stage
+
+ENV LANG=C.UTF-8
+ENV MIX_ENV=prod
+ENV USER=jumpwire
+
+# Creates an unprivileged user to be used exclusively to run the app
+RUN \
+    addgroup \
+    -g 1000 \
+    -S "${USER}" \
+    && adduser \
+    -s /bin/sh \
+    -u 1000 \
+    -G "${USER}" \
+    -h "/opt/jumpwire" \
+    -D "${USER}"
+
+RUN apk add --update --no-cache libstdc++ bash curl jq sudo
+
+WORKDIR /opt/jumpwire
+
+COPY release/extract-release.sh /tmp/
+COPY --from=build-stage /app/_build/prod/jumpwire-*.tar.gz /tmp/
+RUN /tmp/extract-release.sh
+
+EXPOSE 4369
+EXPOSE 4004
+EXPOSE 4443
+EXPOSE 3306
+EXPOSE 5432
+EXPOSE 9569
+
+COPY release/entrypoint.sh /usr/local/bin/entrypoint.sh
+CMD ["/usr/local/bin/entrypoint.sh"]

@@ -140,6 +140,7 @@ defmodule JumpWire.MixProject do
       "release.all": ["release.in_docker", "release.docker_image"],
       "release.in_docker": "cmd DOCKER_BUILDKIT=1 docker build . -o release",
       "release.docker_image": "cmd docker build -t #{@docker_image}:#{@version} -t #{@docker_image}:latest release",
+      "release.docker": "cmd DOCKER_BUILDKIT=1 docker build -t #{@docker_image}:#{@version} -t #{@docker_image}:latest .",
     ]
   end
 
