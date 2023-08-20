@@ -89,7 +89,6 @@ config :jumpwire, JumpWire.Cloak.KeyRing,
 
 config :hydrax, JumpWire.Cloak.Storage.DeltaCrdt, storage_module: JumpWire.Cloak.Storage.DeltaCrdt.DiskStorage
 config :hydrax, JumpWire.Cloak.Storage.DeltaCrdt.DiskStorage, filename: 'jumpwire_keys'
-config :hydrax, JumpWire.Events.Adapters.DeltaCrdt.Storage, filename: 'jumpwire_events'
 
 config :telemetry_metrics_prometheus, port: 9568
 

@@ -2,4 +2,10 @@
 /.github/
 /.hooks/
 
+# ignore local dev files
 .iex.exs
+/config/*.secrets.exs
+/.vscode/
+
+erl_crash.dump
+*.log

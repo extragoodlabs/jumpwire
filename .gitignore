@@ -29,12 +29,9 @@ gasket-*.tar
 # Tarballs from docker builds
 /release/*.tar.gz
 
-/packer/manifest.json
-
 /priv/pki/
 /priv/native/
 
-/jumpwire_events
 /*.log
 /jumpwire_*keys
 /jumpwire_credentials/
