@@ -7,7 +7,7 @@ defmodule JumpWire.ProxyCase do
       alias JumpWire.Manifest
 
       setup_all do
-        org_id = Application.get_env(:jumpwire, JumpWire.Cloak.KeyRing)[:default_org]
+        org_id = JumpWire.Metadata.get_org_id()
         client = %ClientAuth{
           id: Uniq.UUID.uuid4(),
           name: "proxy auth",

@@ -39,10 +39,10 @@ config :jumpwire, signing_token: "v+6ICodXeSGjqEQUMpjWuOJNpBWOfXuuk/ogKCvRtbU="
 
 config :jumpwire, JumpWire.Cloak.KeyRing,
   master_key: "9XzcAgOCLNf46trUABvzAnbJM970klxKb7U8PAwP8gg=",
-  default_org: "jumpwire_test",
+  default_org: "org_jumpwire_test",
   managed_keys: false
 
-config :jumpwire, :metadata, org_id: "jumpwire_test"
+config :jumpwire, :metadata, org_id: "org_jumpwire_test"
 
 config :jumpwire, :pebble, server: true
 config :jumpwire, :acme,

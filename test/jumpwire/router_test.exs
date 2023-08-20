@@ -85,7 +85,7 @@ defmodule JumpWire.RouterTest do
       assert {:ok, body} = Jason.decode(conn.resp_body)
       assert body == %{
         "id" => client.id,
-        "organization_id" => "jumpwire_test",
+        "organization_id" => "org_jumpwire_test",
         "manifest_id" => client.manifest_id,
         "name" => client.name,
         "attributes" => [],
@@ -99,7 +99,7 @@ defmodule JumpWire.RouterTest do
 
       assert conn.status == 200
       assert {:ok, %{"token" => client_token}} = Jason.decode(conn.resp_body)
-      assert {:ok, {"jumpwire_test", client.id}} == JumpWire.Proxy.verify_token(client_token)
+      assert {:ok, {"org_jumpwire_test", client.id}} == JumpWire.Proxy.verify_token(client_token)
     end
 
     test "can be signed with a custom ttl", %{client: client, token: token} do
@@ -109,7 +109,7 @@ defmodule JumpWire.RouterTest do
 
       assert conn.status == 200
       assert {:ok, %{"token" => client_token}} = Jason.decode(conn.resp_body)
-      assert {:ok, {"jumpwire_test", client.id}} == JumpWire.Proxy.verify_token(client_token)
+      assert {:ok, {"org_jumpwire_test", client.id}} == JumpWire.Proxy.verify_token(client_token)
       :timer.sleep(1000)
       assert {:error, :expired} == JumpWire.Proxy.verify_token(client_token)
     end
