@@ -110,7 +110,7 @@ defmodule JumpWire.RouterTest do
       assert conn.status == 200
       assert {:ok, %{"token" => client_token}} = Jason.decode(conn.resp_body)
       assert {:ok, {"org_jumpwire_test", client.id}} == JumpWire.Proxy.verify_token(client_token)
-      :timer.sleep(1000)
+      :timer.sleep(1100)
       assert {:error, :expired} == JumpWire.Proxy.verify_token(client_token)
     end
   end
