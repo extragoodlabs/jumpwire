@@ -720,14 +720,7 @@ defmodule JumpWire.Proxy.Postgres do
         Map.get(tables, table, [])
 
       %{column: col, table: table} ->
-        fields =  Map.get(tables, table, [])
-        case Enum.find(fields, fn %{column: name} -> name == col end) do
-          nil ->
-            Logger.warn("Could not find field #{table}.#{col} in postgres schema")
-            []
-
-          field -> [field]
-        end
+        find_field(tables, table, col)
     end)
     |> Stream.map(fn field ->
       # find any labels for this field
@@ -747,6 +740,23 @@ defmodule JumpWire.Proxy.Postgres do
         end)
       end)
     end)
+  end
+
+  defp find_field(tables, table, col) do
+    case Map.fetch(tables, table) do
+      {:ok, fields} ->
+        case Enum.find(fields, fn %{column: name} -> name == col end) do
+          nil ->
+            Logger.warn("Could not find colummn #{col} in postgres schema for table #{table}")
+            []
+
+          field -> [field]
+        end
+
+      _ ->
+        Logger.debug("No schema stored for postgres table #{table}, skipping field mapping")
+        []
+    end
   end
 
   defp apply_response_policies(record, policies, fields, tag, state) do
