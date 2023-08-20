@@ -246,7 +246,7 @@ defmodule JumpWire.Proxy.Database do
   """
   @spec convert_schema(Schema.t, map) :: {integer, map}
   def convert_schema(schema = %Schema{}, tables) do
-    table = Map.get(tables, schema.name, [])
+    {_key, table} = Enum.find(tables, {nil, []}, fn {{_, name}, _} -> name == schema.name end)
     oid = table |> List.first(%{}) |> Map.get(:id)
     fields = schema.fields
     |> Stream.map(fn

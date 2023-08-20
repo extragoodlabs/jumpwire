@@ -655,7 +655,7 @@ defmodule JumpWire.Proxy.Postgres do
     end
   end
 
-  defp request_to_record(request, state = %{db_manifest: %{id: db_id}}) do
+  defp request_to_record(request, state = %{db_manifest: %{id: db_id, configuration: config}}) do
     org_id = state.organization_id
 
     schemas =
@@ -664,16 +664,18 @@ defmodule JumpWire.Proxy.Postgres do
         _ -> {%{}, %{}}
       end
 
+    default_namespace = Map.get(config, "schema", "public")
+
     %Record{
       data: %{},
       labels: %{},
       source: "postgres",
       label_format: :key,
     }
-    |> merge_request_field_labels(request.select, :select, schemas)
-    |> merge_request_field_labels(request.update, :update, schemas)
-    |> merge_request_field_labels(request.delete, :delete, schemas)
-    |> merge_request_field_labels(request.insert, :insert, schemas)
+    |> merge_request_field_labels(request.select, :select, schemas, default_namespace)
+    |> merge_request_field_labels(request.update, :update, schemas, default_namespace)
+    |> merge_request_field_labels(request.delete, :delete, schemas, default_namespace)
+    |> merge_request_field_labels(request.insert, :insert, schemas, default_namespace)
   end
 
   defp request_to_record(_request, _state) do
@@ -712,15 +714,17 @@ defmodule JumpWire.Proxy.Postgres do
     {:error, [msg, Messages.ready_for_query()]}
   end
 
-  defp merge_request_field_labels(record, fields, type, {tables, schemas}) do
+  defp merge_request_field_labels(record, fields, type, {tables, schemas}, default_namespace) do
     fields
     |> Stream.flat_map(fn
-      %{column: :wildcard, table: table} ->
-        # return all fields for this table
-        Map.get(tables, table, [])
+      %{column: :wildcard, table: table, schema: namespace} ->
+        # Find and return all fields for this table
+        namespace = namespace || default_namespace
+        Map.get(tables, {namespace, table}, [])
 
-      %{column: col, table: table} ->
-        find_field(tables, table, col)
+      %{column: col, table: table, schema: namespace} ->
+        namespace = namespace || default_namespace
+        find_field(tables, namespace, table, col)
     end)
     |> Stream.map(fn field ->
       # find any labels for this field
@@ -742,19 +746,19 @@ defmodule JumpWire.Proxy.Postgres do
     end)
   end
 
-  defp find_field(tables, table, col) do
-    case Map.fetch(tables, table) do
+  defp find_field(tables, namespace, table, col) do
+    case Map.fetch(tables, {namespace, table}) do
       {:ok, fields} ->
         case Enum.find(fields, fn %{column: name} -> name == col end) do
           nil ->
-            Logger.warn("Could not find colummn #{col} in postgres schema for table #{table}")
+            Logger.warn("Could not find colummn #{col} in postgres schema for table #{namespace}.#{table}")
             []
 
           field -> [field]
         end
 
       _ ->
-        Logger.debug("No schema stored for postgres table #{table}, skipping field mapping")
+        Logger.debug("No schema stored for postgres table #{namespace}.#{table}, skipping field mapping")
         []
     end
   end

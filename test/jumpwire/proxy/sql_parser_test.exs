@@ -458,6 +458,57 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
    ]
   end
 
+  test "parsing of postgres ORM startup query" do
+    # all tables starting with `pg_` are reserved for postgres and don't require explicitly specifying
+    # the namespace
+    query = """
+    SELECT t.oid, t.typname, t.typsend, t.typreceive, t.typoutput, t.typinput,
+           coalesce(d.typelem, t.typelem), coalesce(r.rngsubtype, 0),
+           ARRAY (
+               SELECT a.atttypid
+               FROM pg_attribute AS a
+               WHERE a.attrelid = t.typrelid AND a.attnum > 0 AND NOT a.attisdropped
+               ORDER BY a.attnum
+           )
+    FROM pg_type AS t
+    LEFT JOIN pg_type AS d ON t.typbasetype = d.oid
+    LEFT JOIN pg_range AS r ON r.rngtypid = t.oid OR (t.typbasetype <> 0 AND r.rngtypid = t.typbasetype)
+    WHERE (t.typrelid = 0)
+    AND (t.typelem = 0 OR NOT EXISTS (SELECT 1 FROM pg_catalog.pg_type s WHERE s.typrelid != 0 AND s.oid = t.typelem))
+    """
+
+    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, request} = Parser.to_request(statement)
+    assert request.select == [
+      %Field{schema: "pg_catalog", table: "pg_type", column: "typelem"},
+      %Field{schema: "pg_catalog", table: "pg_type", column: "oid"},
+      %Field{schema: "pg_catalog", table: "pg_type", column: "typrelid"},
+      %Field{schema: "pg_catalog", table: "pg_type", column: "typelem"},
+      %Field{schema: "pg_catalog", table: "pg_type", column: "typrelid"},
+      %Field{schema: "pg_catalog", table: "pg_attribute", column: "attisdropped"},
+      %Field{schema: "pg_catalog", table: "pg_attribute", column: "attnum"},
+      %Field{schema: "pg_catalog", table: "pg_type", column: "typrelid"},
+      %Field{schema: "pg_catalog", table: "pg_attribute", column: "attrelid"},
+      %Field{schema: "pg_catalog", table: "pg_attribute", column: "atttypid"},
+      %Field{schema: "pg_catalog", table: "pg_range", column: "rngsubtype"},
+      %Field{schema: "pg_catalog", table: "pg_type", column: "typelem"},
+      %Field{schema: "pg_catalog", table: "pg_type", column: "typelem"},
+      %Field{schema: "pg_catalog", table: "pg_type", column: "typinput"},
+      %Field{schema: "pg_catalog", table: "pg_type", column: "typoutput"},
+      %Field{schema: "pg_catalog", table: "pg_type", column: "typreceive"},
+      %Field{schema: "pg_catalog", table: "pg_type", column: "typsend"},
+      %Field{schema: "pg_catalog", table: "pg_type", column: "typname"},
+      %Field{schema: "pg_catalog", table: "pg_type", column: "oid"},
+      %Field{schema: "pg_catalog", table: "pg_type", column: "typbasetype"},
+      %Field{schema: "pg_catalog", table: "pg_range", column: "rngtypid"},
+      %Field{schema: "pg_catalog", table: "pg_type", column: "typbasetype"},
+      %Field{schema: "pg_catalog", table: "pg_type", column: "oid"},
+      %Field{schema: "pg_catalog", table: "pg_range", column: "rngtypid"},
+      %Field{schema: "pg_catalog", table: "pg_type", column: "oid"},
+      %Field{schema: "pg_catalog", table: "pg_type", column: "typbasetype"}
+    ]
+  end
+
   defp assert_table_select(statement, name) do
     assert %Query{
       body: %Select{
