@@ -93,11 +93,27 @@ Start the JumpWire engine:
 ``` shell
 export ENCRYPTION_KEY=$(openssl rand -base64 32)
 docker run -d --name jumpwire \
-  -p 4004:4004 -p 4443:4443 -p 3306:3306 -p 6432:5432 \
+  -p 4004:4004 -p 4443:4443 -p 3307:3307 -p 6432:6432 \
   -v $(pwd)/jumpwire.yaml:/etc/jumpwire/jumpwire.yaml \
   -e JUMPWIRE_CONFIG_PATH=/etc/jumpwire \
   -e JUMPWIRE_ENCRYPTION_KEY="${ENCRYPTION_KEY}" \
+  -e JUMPWIRE_POSTGRES_PROXY_PORT=6432
+  -e JUMPWIRE_MYSQL_PROXY_PORT=3307
   ghcr.io/extragoodlabs/jumpwire:latest
+```
+
+Setting proxy ports depends on whether there are other services running on the same ports on the host. For example, if a PostgreSQL database is running on the same host as the container, it's necessary to remap JumpWire engine's proxy port to something other than 5432, since that port is occupied by the local PostgreSQL database. This example maps proxy ports to a non-standard port number to avoid conflicts with locally running databases.
+
+If the engine starts up correctly, the following message should be printed to the logs:
+
+``` text
+************************************************************
+The JumpWire engine is up!
+
+Check out our documentation at https://docs.jumpwire.io.
+
+Version: x.x.x
+************************************************************
 ```
 
 With the container running, the JumpWire engine can connect to databases that are also running on the same host as the container, or accessible from the same host. This setup is ideally suited for testing JumpWire in a local development environment, or for small-scale apps that have a full tech stack on a single host.
@@ -112,11 +128,12 @@ The following ports are used by default:
 
 - `4004` - HTTP server for JSON API requests
 - `4443` - HTTPS server for JSON API requests
-- `9568` - HTTP server exposing metrics in Prometheus format
-- `5432` - client connections for PostgreSQL
-- `3306` - client connections for MySQL
+- `9568` - Endpoint that exposes Prometheus telemetry metrics. Useful for reporting on a variety of operations from the engine container, as well as performance.
+- `5432` - Client connections for PostgreSQL.
+- `3306` - Client connections for MySQL.
+- `4369` - Internal port used for nodes in the same cluster to connect to each other. When running more than one JumpWire node, his must be exposed to other nodes in the cluster but should not be publicly accessible.
 
-These can be configured as noted below.
+These ports can be changed using envirionmenal variables as noted below.
 
 ## Configuration
 
