@@ -509,6 +509,13 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     ]
   end
 
+  test "parsing of variable sets" do
+    query = "SET client_min_messages TO warning;SET TIME ZONE INTERVAL '+00:00' HOUR TO MINUTE;"
+    assert {:ok, [var_statement, tz_statement]} = Parser.parse_postgresql(query)
+    assert {:ok, _request} = Parser.to_request(var_statement)
+    assert {:ok, _request} = Parser.to_request(tz_statement)
+  end
+
   defp assert_table_select(statement, name) do
     assert %Query{
       body: %Select{

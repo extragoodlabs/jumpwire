@@ -509,6 +509,18 @@ defmodule JumpWire.Proxy.SQL.Statement do
     field :escape_char, String.t() | nil
   end
 
+  typedstruct module: SetVariable do
+    field :local, boolean()
+    field :hivevar, boolean()
+    field :variable, Statement.object_name()
+    field :value, [Statement.expr()]
+  end
+
+  typedstruct module: SetTimeZone do
+    field :local, boolean()
+    field :value, Statement.expr()
+  end
+
   @type expr()
   :: Ident.t
   | {:compound_identifier, [Ident.t]}

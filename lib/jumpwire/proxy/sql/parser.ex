@@ -131,6 +131,9 @@ defmodule JumpWire.Proxy.SQL.Parser do
     {:ok, acc.request}
   end
 
+  def to_request(%Statement.SetVariable{}), do: {:ok, %Request{}}
+  def to_request(%Statement.SetTimeZone{}), do: {:ok, %Request{}}
+
   def to_request(_), do: {:error, :invalid}
 
   def find_fields(acc, query = %Statement.Query{body: select = %Statement.Select{}}) do
