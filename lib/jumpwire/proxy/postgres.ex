@@ -333,11 +333,19 @@ defmodule JumpWire.Proxy.Postgres do
     end
   end
 
+  defp query_statements_to_requests(statements) do
+    Enum.reduce_while(statements, {:ok, []}, fn statement, {_, requests} ->
+      case Parser.to_request(statement) do
+        {:ok, request} -> {:cont, {:ok, [request | requests]}}
+        _ -> {:halt, :error}
+      end
+    end)
+  end
+
   defp parse_client_query(query, data, state = %{flags: %{parse_requests: true}}) do
-    # For now we assume a single statement per request.
-    with {:ok, [statement]} <- Parser.parse_postgresql(query),
-         {:ok, request} <- Parser.to_request(statement) do
-      handle_client_query(request, statement, data, state)
+    with {:ok, statements} <- Parser.parse_postgresql(query),
+         {:ok, requests} <- query_statements_to_requests(statements) do
+      handle_client_query(requests, statements, data, state)
     else
       _ ->
         Logger.warn("Unable to parse PostgreSQL statement")
@@ -353,15 +361,23 @@ defmodule JumpWire.Proxy.Postgres do
   end
 
   @spec handle_client_query(
-    JumpWire.Proxy.Request.t(),
-    JumpWire.Proxy.SQL.Statement.Query.t(),
+    [JumpWire.Proxy.Request.t()],
+    [JumpWire.Proxy.SQL.Statement.Query.t()],
     binary(),
     Database.state()
   )
-  :: {:ok | :wait, Database.state()} | {:stop, atom(), Database.state()}
-  def handle_client_query(request, _statement, data, state) do
-    case apply_request_policies(request, data, state) do
-      {:ok, _request, data} ->
+  :: {:noreply, Database.state()}
+  def handle_client_query(requests, _statements, data, state) do
+    result =
+      Enum.reduce_while(requests, {:ok, data}, fn req, _acc ->
+        case apply_request_policies(req, data, state) do
+          {:ok, _request, data} -> {:cont, {:ok, data}}
+          err -> {:halt, err}
+        end
+      end)
+
+    case result do
+      {:ok, data} ->
         :ok = Database.msg_send(state.db_socket, data)
         :ok = Database.socket_active(state.client_socket)
         {:noreply, state}
