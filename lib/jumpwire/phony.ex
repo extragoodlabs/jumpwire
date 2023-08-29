@@ -182,21 +182,9 @@ defmodule JumpWire.Phony do
 
     GlobalConfig.put(:client_auth, {org_id, client_auth.id}, client_auth)
     JumpWire.ClientAuth.hook(client_auth, :insert)
+    token = JumpWire.Proxy.sign_token(org_id, client_auth.id)
 
-    {client_auth, generate_client_token(client_auth)}
-  end
-
-  @doc """
-  Generates a token for the given ClientAuth/Manifest.
-  """
-  def generate_client_token(%ClientAuth{id: id, organization_id: org_id}),
-    do: generate_client_token({org_id, id})
-  def generate_client_token(%Manifest{id: id, organization_id: org_id, root_type: :jumpwire}),
-    do: generate_client_token({org_id, id})
-  def generate_client_token({org_id, manifest_id}) do
-    secret = Application.fetch_env!(:jumpwire, :proxy)
-    |> Keyword.get(:secret_key)
-    Plug.Crypto.sign(secret, "manifest", {org_id, manifest_id})
+    {client_auth, token}
   end
 
   @doc """
