@@ -328,3 +328,8 @@ with {:ok, path} <- System.fetch_env("JUMPWIRE_SSO_METADATA_PATH"),
       }
     ]
 end
+
+with {:ok, val} <- fetch_boolean_env("JUMPWIRE_DISABLE_REPORTING") do
+  config :jumpwire, JumpWire.Analytics,
+    enabled: not val
+end

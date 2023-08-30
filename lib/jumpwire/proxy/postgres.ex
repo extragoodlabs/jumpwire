@@ -260,6 +260,7 @@ defmodule JumpWire.Proxy.Postgres do
            {:ok, state} <- client_authenticated(client, org_id, db_id, state) do
         JumpWire.Tracer.context(client: client_id)
         Logger.debug("Found client for postgresql token")
+        JumpWire.Analytics.proxy_authenticated(org_id, :postgresql)
         state
       else
         _ ->

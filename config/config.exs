@@ -92,7 +92,9 @@ config :hydrax, JumpWire.Cloak.Storage.DeltaCrdt.DiskStorage, filename: 'jumpwir
 
 config :telemetry_metrics_prometheus, port: 9568
 
-config :jumpwire, :metadata, org_id: "org_generic"
+config :jumpwire, :metadata,
+  org_id: "org_generic",
+  node_id: nil
 
 config :samly, Samly.State, store: JumpWire.SSO.SamlyState
 config :samly, Samly.Provider, idp_id_from: :path_segment
@@ -105,9 +107,16 @@ config :jumpwire, :acme,
   generate: false,
   key_size: 4096,
   directory_url: "https://acme-staging-v02.api.letsencrypt.org/directory",
-  cert_renewal_seconds: 60 * 60 * 24 * 30,  # 30 days
+  # default to 30 days
+  cert_renewal_seconds: 60 * 60 * 24 * 30,
   cert_dir: "priv/pki",
   hostname: nil,
   email: nil
+
+config :jumpwire, JumpWire.Analytics,
+  enabled: false,
+  api_url: "https://events.jumpwire.io",
+  api_key: "phc_GxUkxISBf1whq6dhJ3Ucb7hlPh7OqExJm8qSQqxhhCE",
+  timeout: 5_000
 
 import_config "#{config_env()}.exs"

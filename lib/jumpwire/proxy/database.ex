@@ -113,6 +113,7 @@ defmodule JumpWire.Proxy.Database do
         with {:ok, %{root_type: unquote(manifest_type)}} <- JumpWire.Manifest.fetch(org_id, db_id),
              {:ok, state} <- client_authenticated(client, org_id, db_id, state) do
           Logger.debug("Client authenticated")
+          JumpWire.Analytics.proxy_authenticated(org_id, unquote(manifest_type))
           {:noreply, state}
         else
           _ ->

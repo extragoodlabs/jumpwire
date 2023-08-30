@@ -62,7 +62,11 @@ defmodule JumpWire.ConfigLoader do
   @doc """
   Load objects from all configured stores.
   """
-  def load(org_id), do: from_disk(org_id)
+  def load(org_id) do
+    data = from_disk(org_id)
+    JumpWire.Analytics.config_loaded(org_id, data)
+    data
+  end
 
   @doc """
   Load configuration objects from YAML files located in a specified directory.
