@@ -1,4 +1,5 @@
 import Config
+import JumpWire.Config
 
 with {:ok, token} <- System.fetch_env("JUMPWIRE_TOKEN") do
   config :jumpwire, :upstream, token: token
@@ -132,18 +133,14 @@ config :jumpwire, :telemetry,
   cloudwatch: [
     namespace: System.get_env("JUMPWIRE_CLOUDWATCH_NAMESPACE", "jumpwire"),
   ]
-case System.get_env("JUMPWIRE_CLOUDWATCH_INTERVAL_SECONDS", "") |> Integer.parse() do
-  {interval, _} -> config :jumpwire, :telemetry, cloudwatch: [push_interval: interval * 1_000]
-  _ -> nil
+with {:ok, interval} <- fetch_integer_env("JUMPWIRE_CLOUDWATCH_INTERVAL_SECONDS") do
+  config :jumpwire, :telemetry, cloudwatch: [push_interval: interval * 1_000]
 end
-case System.get_env("JUMPWIRE_CLOUDWATCH_ENABLED") do
-  "true" -> config :jumpwire, :telemetry, cloudwatch: [enabled: true]
-  "false" -> config :jumpwire, :telemetry, cloudwatch: [enabled: false]
-  _ -> nil
+with {:ok, val} <- fetch_boolean_env("JUMPWIRE_CLOUDWATCH_ENABLED") do
+  config :jumpwire, :telemetry, cloudwatch: [enabled: val]
 end
 
-with {:ok, port} <- System.fetch_env("JUMPWIRE_PROMETHEUS_PORT"),
-     {port, ""} <- Integer.parse(port) do
+with {:ok, port} <- fetch_integer_env("JUMPWIRE_PROMETHEUS_PORT") do
   config :telemetry_metrics_prometheus, port: port
 end
 
@@ -161,23 +158,19 @@ with {:ok, domain} <- System.fetch_env("JUMPWIRE_DOMAIN") do
   config :jumpwire, :acme, hostname: domain
 end
 
-with {:ok, port} <- System.fetch_env("JUMPWIRE_POSTGRES_PROXY_PORT"),
-     {port, ""} <- Integer.parse(port) do
+with {:ok, port} <- fetch_integer_env("JUMPWIRE_POSTGRES_PROXY_PORT") do
   config :jumpwire, JumpWire.Proxy.Postgres, port: port
 end
 
-with {:ok, pool_size} <- System.fetch_env("JUMPWIRE_POSTGRES_PROXY_POOL_SIZE"),
-     {pool_size, ""} <- Integer.parse(pool_size) do
+with {:ok, pool_size} <- fetch_integer_env("JUMPWIRE_POSTGRES_PROXY_POOL_SIZE") do
   config :jumpwire, JumpWire.Proxy.Postgres, pool_size: pool_size
 end
 
-with {:ok, port} <- System.fetch_env("JUMPWIRE_MYSQL_PROXY_PORT"),
-     {port, ""} <- Integer.parse(port) do
+with {:ok, port} <- fetch_integer_env("JUMPWIRE_MYSQL_PROXY_PORT") do
   config :jumpwire, JumpWire.Proxy.MySQL, port: port
 end
 
-with {:ok, pool_size} <- System.fetch_env("JUMPWIRE_MYSQL_PROXY_POOL_SIZE"),
-     {pool_size, ""} <- Integer.parse(pool_size) do
+with {:ok, pool_size} <- fetch_integer_env("JUMPWIRE_MYSQL_PROXY_POOL_SIZE") do
   config :jumpwire, JumpWire.Proxy.MySQL, pool_size: pool_size
 end
 
@@ -264,32 +257,20 @@ with {:ok, path} <- System.fetch_env("JUMPWIRE_CONFIG_PATH") do
   config :jumpwire, config_dir: path
 end
 
-case System.fetch_env("JUMPWIRE_PARSE_REQUESTS") do
-  {:ok, "true"} -> config :jumpwire, :proxy, parse_requests: true
-  {:ok, "false"} -> config :jumpwire, :proxy, parse_requests: false
-  {:ok, "1"} -> config :jumpwire, :proxy, parse_requests: true
-  {:ok, "0"} -> config :jumpwire, :proxy, parse_requests: false
-  _ -> nil
+with {:ok, val} <- fetch_boolean_env("JUMPWIRE_PARSE_REQUESTS") do
+  config :jumpwire, :proxy, parse_requests: val
 end
 
-case System.fetch_env("JUMPWIRE_PARSE_RESPONSES") do
-  {:ok, "true"} -> config :jumpwire, :proxy, parse_responses: true
-  {:ok, "false"} -> config :jumpwire, :proxy, parse_responses: false
-  {:ok, "1"} -> config :jumpwire, :proxy, parse_responses: true
-  {:ok, "0"} -> config :jumpwire, :proxy, parse_responses: false
-  _ -> nil
+with {:ok, val} <- fetch_boolean_env("JUMPWIRE_PARSE_RESPONSES") do
+  config :jumpwire, :proxy, parse_responses: val
 end
 
 with {:ok, cert_dir} <- System.fetch_env("ACME_CERT_DIRECTORY") do
   config :jumpwire, :acme, cert_dir: cert_dir
 end
 
-case System.fetch_env("ACME_GENERATE_CERT") do
-  {:ok, "true"} -> config :jumpwire, :acme, generate: true
-  {:ok, "false"} -> config :jumpwire, :acme, generate: false
-  {:ok, "1"} -> config :jumpwire, :acme, generate: true
-  {:ok, "0"} -> config :jumpwire, :acme, generate: false
-  _ -> nil
+with {:ok, val} <- fetch_boolean_env("ACME_GENERATE_CERT") do
+  config :jumpwire, :acme, generate: val
 end
 
 with {:ok, email} <- System.fetch_env("ACME_EMAIL") do
@@ -311,15 +292,7 @@ end
 with {:ok, path} <- System.fetch_env("JUMPWIRE_SSO_METADATA_PATH"),
      {:ok, idp_id} <- System.fetch_env("JUMPWIRE_SSO_IDP") do
   sp_id = System.get_env("JUMPWIRE_SSO_SPID", "jumpwire")
-  signed_envelopes =
-    case System.fetch_env("JUMPWIRE_SSO_SIGNED_ENVELOPES") do
-      {:ok, "true"} -> true
-      {:ok, "false"} -> false
-      {:ok, "1"} -> true
-      {:ok, "0"} -> false
-      _ -> true
-    end
-
+  signed_envelopes = get_boolean_env("JUMPWIRE_SSO_SIGNED_ENVELOPES", true)
   generated_name = System.get_env("JUMPWIRE_SSO_GENERATED_CERTNAME", "localhost")
 
   config :jumpwire, :sso,
