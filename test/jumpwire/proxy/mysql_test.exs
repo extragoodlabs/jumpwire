@@ -147,7 +147,9 @@ defmodule JumpWire.Proxy.MySQLTest do
     Process.flag(:trap_exit, true)
 
     assert {:ok, pid} = MyXQL.start_link(params)
-    assert catch_exit(MyXQL.query(pid, "show tables;"))
+    assert capture_log(fn ->
+      assert catch_exit(MyXQL.query(pid, "show tables;"))
+    end) =~ "Authentication failed"
   end
 
   test "querying for null values", %{params: params, table: table} do
@@ -346,7 +348,9 @@ defmodule JumpWire.Proxy.MySQLTest do
     |> Keyword.replace(:username, other_manifest.id)
     |> MyXQL.start_link()
 
-    assert catch_exit(MyXQL.query(conn, "show tables;"))
+    assert capture_log(fn ->
+      assert catch_exit(MyXQL.query(conn, "show tables;"))
+    end) =~ "Authentication failed"
   end
 
   test "de-tokenize data based on manifest classification", %{

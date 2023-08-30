@@ -1,8 +1,9 @@
 defmodule JumpWire.PolicyTest do
   use JumpWire.Metastore.PostgresqlKVCase
+  use PropCheck
+  import ExUnit.CaptureLog
   alias JumpWire.Policy
   alias JumpWire.Record
-  use PropCheck
 
   @org_id Application.compile_env(:jumpwire, JumpWire.Cloak.KeyRing)[:default_org]
 
@@ -367,8 +368,9 @@ defmodule JumpWire.PolicyTest do
         JumpWire.GlobalConfig.delete(:metastores, {metastore.organization_id, metastore.id})
       end
 
-      assert {:halt, {:error, :metastore_failure}} =
-        Policy.apply_policy(policy, record, metadata)
+      capture_log fn ->
+        assert {:halt, {:error, :metastore_failure}} = Policy.apply_policy(policy, record, metadata)
+      end
     end
   end
 

@@ -397,10 +397,7 @@ defmodule JumpWire.Proxy.MySQL.Setup do
     total =
       case safe_query(conn, "SELECT COUNT(*) FROM #{schema.name}", []) do
         {:ok, %{rows: [[total]]}} -> total
-
-        err ->
-          Logger.error("Unable to count stats for #{schema.name}: #{inspect err}")
-          :unknown
+        _ -> :unknown
       end
 
     stats =

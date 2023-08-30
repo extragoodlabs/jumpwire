@@ -5,6 +5,7 @@ defmodule JumpWire.ProxyCase do
     quote do
       alias JumpWire.ClientAuth
       alias JumpWire.Manifest
+      import ExUnit.CaptureLog
 
       setup_all do
         org_id = JumpWire.Metadata.get_org_id()

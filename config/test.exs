@@ -1,7 +1,7 @@
 import Config
 
 config :logger,
-  level: :debug,
+  level: :error,
   backends: [:console],
   compile_time_purge_matching: [
     [module: TelemetryMetricsCloudwatch.Cache],

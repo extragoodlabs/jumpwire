@@ -338,7 +338,9 @@ defmodule JumpWire.Proxy.PostgresTest do
     |> Keyword.replace(:username, other_manifest.id)
     |> Postgrex.start_link()
 
-    assert catch_exit(Postgrex.query(conn, "select * from pg_catalog.pg_tables;", []))
+    assert capture_log(fn ->
+      assert catch_exit(Postgrex.query(conn, "select * from pg_catalog.pg_tables;", []))
+    end) =~ "invalid_password"
   end
 
   test "de-tokenize data based on manifest classification", %{

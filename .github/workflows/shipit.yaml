@@ -69,11 +69,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-mix-
       - run: mix deps.get
-      - run: mix test
+      - run: mix test --trace
       - name: Test against MariaDB
         env:
           MYSQL_TEST_PORT: 3307
-        run: mix test test/jumpwire/proxy/mysql_test.exs
+        run: mix test --trace test/jumpwire/proxy/mysql_test.exs
 
   docker-image:
     runs-on: ubuntu-latest
