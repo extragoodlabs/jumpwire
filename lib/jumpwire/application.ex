@@ -85,6 +85,8 @@ defmodule JumpWire.Application do
 
   @impl true
   def start(_type, _args) do
+    JumpWire.Metadata.set_node_id()
+
     # Register default ports for websocket schemes, used when parsing
     # a string into a URI structure.
     URI.default_port("ws", 80)
@@ -159,6 +161,7 @@ defmodule JumpWire.Application do
       {Task.Supervisor, name: JumpWire.ProxySupervisor},
       {Task.Supervisor, name: JumpWire.DatabaseConnectionSupervisor},
       {Task.Supervisor, name: JumpWire.ACMESupervisor},
+      {Task.Supervisor, name: JumpWire.AnalyticsSupervisor},
 
       {Phoenix.PubSub, name: JumpWire.PubSub.server()},
       JumpWire.LocalConfig,

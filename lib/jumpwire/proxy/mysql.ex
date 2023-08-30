@@ -367,6 +367,7 @@ defmodule JumpWire.Proxy.MySQL do
          {:ok, db} <- JumpWire.GlobalConfig.fetch(:manifests, {org_id, db_id}) do
       JumpWire.Tracer.context(org_id: org_id, manifest: db_id, client: client_id)
       Logger.info("Client successfully authenticated")
+      JumpWire.Analytics.proxy_authenticated(org_id, :mysql)
       Messages.ok_msg() |> encode_and_send(seq, state.client_socket)
 
       state = %{state |

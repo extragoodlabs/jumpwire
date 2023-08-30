@@ -21,4 +21,13 @@ defmodule JumpWire.Metadata do
     Uniq.UUID.uuid5(:oid, "urn:jumpwire.io:organization:#{org_id}")
   end
   def org_id_to_uuid(org_id), do: org_id
+
+  def set_node_id() do
+    id = Uniq.UUID.uuid4()
+    JumpWire.update_env(:metadata, :node_id, id)
+  end
+
+  def get_node_id() do
+    Application.get_env(:jumpwire, :metadata)[:node_id]
+  end
 end

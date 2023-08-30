@@ -15,3 +15,5 @@ config :honeybadger, environment_name: :ignored
 
 config :jumpwire, :acme,
   directory_url: "https://acme-v02.api.letsencrypt.org/directory"
+
+config :jumpwire, JumpWire.Analytics, enabled: true
