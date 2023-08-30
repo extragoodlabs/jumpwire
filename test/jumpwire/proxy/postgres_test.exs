@@ -424,29 +424,31 @@ defmodule JumpWire.Proxy.PostgresTest do
   end
 
   test "tracks query time", ctx = %{params: params, table: table} do
-    {:ok, pid} = Postgrex.start_link(params)
-    self = self()
+    {:ok, conn} = Postgrex.start_link(params)
+    pid = self()
+    handler_id = "test-#{table}"
 
     :telemetry.attach(
-      "test-#{table}",
+      handler_id,
       [:database, :client],
       fn name, measurements, metadata, _ ->
-        assert metadata.client == ctx.client.id
-        assert metadata.database == ctx.manifest.configuration["database"]
-        assert metadata.organization == ctx.org_id
-
-        assert measurements.count == 1
-        assert measurements.duration > 0
-        send(self, {:telemetry_event, name, measurements})
+        send(pid, {:telemetry_event, name, metadata, measurements})
       end,
       nil
     )
 
-    assert {:ok, %{rows: []}} = Postgrex.query(pid, "select value from #{table};", [])
+    assert {:ok, %{rows: []}} = Postgrex.query(conn, "select value from #{table};", [])
 
     # We'll actually receive two measurements because Postgrex performs a bootstrap query.
     # For our test purposes, that's entirely okay and there's no need to filter it out.
-    assert_receive {:telemetry_event, [:database, :client], _}
+    assert_receive {:telemetry_event, [:database, :client], metadata, measurements}
+    assert metadata.client == ctx.client.id
+    assert metadata.database == ctx.manifest.configuration["database"]
+    assert metadata.organization == ctx.org_id
+    assert measurements.count == 1
+    assert measurements.duration > 0
+
+    :telemetry.detach(handler_id)
   end
 
   test "reversing of tokens from the DB", %{

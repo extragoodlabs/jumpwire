@@ -445,16 +445,15 @@ defmodule JumpWire.Proxy.MySQLTest do
   end
 
   test "tracks query time (query_type=text)", %{params: params, table: table} do
-    {:ok, pid} = MyXQL.start_link(params)
-    self = self()
+    {:ok, conn} = MyXQL.start_link(params)
+    pid = self()
+    handler_id = "test-#{table}-text"
 
     :telemetry.attach(
-      "test-#{table}-text",
+      handler_id,
       [:database, :client],
-      fn name, measurements, _metadata, _ ->
-        assert measurements.count == 1
-        assert measurements.duration > 0
-        send(self, {:telemetry_event, name, measurements})
+      fn name, measurements, metadata, _ ->
+        send(pid, {:telemetry_event, name, metadata, measurements})
       end,
       nil
     )
@@ -462,34 +461,39 @@ defmodule JumpWire.Proxy.MySQLTest do
     # For text queries we need to run two queries, so the previous one is tracked. This happens because,
     # in the event of multi-resultset, I couldn't find a deterministic way to know for sure a query has
     # completed. For more context, please refer to the corresponding function at the MySQL proxy.
-    assert {:ok, %{rows: []}} = MyXQL.query(pid, "select value from #{table};", [], query_type: :text)
-    assert {:ok, %{rows: []}} = MyXQL.query(pid, "select value from #{table};", [], query_type: :text)
-    assert_receive {:telemetry_event, [:database, :client], _}
+    assert {:ok, %{rows: []}} = MyXQL.query(conn, "select value from #{table};", [], query_type: :text)
+    assert {:ok, %{rows: []}} = MyXQL.query(conn, "select value from #{table};", [], query_type: :text)
+    assert_receive {:telemetry_event, [:database, :client], _metadata, measurements}
+    assert measurements.count == 1
+    assert measurements.duration > 0
+    :telemetry.detach(handler_id)
   end
 
   test "tracks query time (query_type=binary)", ctx = %{params: params, table: table} do
-    {:ok, pid} = MyXQL.start_link(params)
-    self = self()
+    {:ok, conn} = MyXQL.start_link(params)
+    pid = self()
+    handler_id = "test-#{table}-binary"
 
     :telemetry.attach(
-      "test-#{table}-binary",
+      handler_id,
       [:database, :client],
       fn name, measurements, metadata, _ ->
-        assert metadata.client == ctx.client.id
-        assert metadata.database == ctx.manifest.configuration["database"]
-        assert metadata.organization == ctx.org_id
-
-        assert measurements.count == 1
-        assert measurements.duration > 0
-        send(self, {:telemetry_event, name, measurements})
+        send(pid, {:telemetry_event, name, metadata, measurements})
       end,
       nil
     )
 
     # For binary queries we don't need to run multiple queries, as the `COM_STMT_CLOSE` message
     # will trigger the query timer.
-    assert {:ok, %{rows: []}} = MyXQL.query(pid, "select value from #{table};", [])
-    assert_receive {:telemetry_event, [:database, :client], _}
+    assert {:ok, %{rows: []}} = MyXQL.query(conn, "select value from #{table};", [])
+    assert_receive {:telemetry_event, [:database, :client], metadata, measurements}
+    assert metadata.client == ctx.client.id
+    assert metadata.database == ctx.manifest.configuration["database"]
+    assert metadata.organization == ctx.org_id
+    assert measurements.count == 1
+    assert measurements.duration > 0
+
+    :telemetry.detach(handler_id)
   end
 
   # Regression test for JW-538.
