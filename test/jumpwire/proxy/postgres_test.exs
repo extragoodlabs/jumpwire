@@ -476,22 +476,21 @@ defmodule JumpWire.Proxy.PostgresTest do
     org_id = manifest.organization_id
     policies = JumpWire.Policy.list_all(org_id)
 
-    no_encryption =
-      policies
-      |> Enum.map(fn policy ->
-        {{org_id, policy.id}, %{policy | label: "notsecret"}}
-      end)
-      |> Map.new()
+    no_encryption = policies
+    |> Enum.map(fn policy ->
+      {{org_id, policy.id}, %{policy | label: "notsecret"}}
+    end)
+    |> Map.new()
 
     JumpWire.GlobalConfig.set(:policies, org_id, no_encryption)
+    assert :ok == Setup.enable_database(manifest)
     :ok = Setup.enable_table(manifest, schema)
 
     {:ok, %{rows: columns}} = Postgrex.query(conn, Setup.sql_list_columns(), [schema.name])
-    handle_columns =
-        columns
-        |> Stream.filter(fn [col_name, _col_type] ->
-          String.ends_with?(col_name, "_jw_handle")
-        end)
+    handle_columns = columns
+    |> Stream.filter(fn [col_name, _col_type] ->
+      String.ends_with?(col_name, "_jw_handle")
+    end)
 
     assert true == Enum.empty?(handle_columns)
   end
