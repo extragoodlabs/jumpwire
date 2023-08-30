@@ -45,13 +45,14 @@ defmodule JumpWire.ProxyCase do
         |> Keyword.get(:secret_key)
         |> Plug.Crypto.sign("manifest", {org_id, client.id})
 
-        %{token: token, org_id: org_id, client: client}
+        %{token: token, org_id: org_id, client: client, policies: policies}
       end
 
-      setup do
+      setup %{policies: policies, org_id: org_id} do
         on_exit fn ->
           # Clean-up persistent connection cache between tests to avoid flakiness
           :ets.delete_all_objects(:manifest_connections)
+          JumpWire.GlobalConfig.set(:policies, org_id, policies)
         end
       end
     end

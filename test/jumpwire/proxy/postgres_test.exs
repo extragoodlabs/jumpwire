@@ -252,9 +252,6 @@ defmodule JumpWire.Proxy.PostgresTest do
     stats = Setup.table_stats(manifest, schema)
     assert stats[:rows] == %{count: 4, target: 4}
     assert stats[:encrypted] == %{"value" => %{count: 4, target: 0}}
-
-    # Revert policy change
-    reset_policies(policies, org_id)
   end
 
   test "decrypted column stats reflect schema label changes", %{conn: conn, manifest: manifest, schema: schema, table: table} do
@@ -308,9 +305,6 @@ defmodule JumpWire.Proxy.PostgresTest do
     stats = Setup.table_stats(manifest, schema)
     assert stats[:rows] == %{count: 4, target: 4}
     assert stats[:tokenized] == %{"phone" => %{count: 4, target: 0}}
-
-    # Revert policy change
-    reset_policies(policies, org_id)
   end
 
   test "detokenized column stats reflects schema label change", %{conn: conn, manifest: manifest, schema: schema, table: table} do
@@ -500,9 +494,6 @@ defmodule JumpWire.Proxy.PostgresTest do
         end)
 
     assert true == Enum.empty?(handle_columns)
-
-    # Revert policy change
-    reset_policies(policies, org_id)
   end
 
   test "enabling then disabling table removes handling columns", %{conn: conn, manifest: manifest, schema: schema} do
@@ -538,9 +529,6 @@ defmodule JumpWire.Proxy.PostgresTest do
         end)
 
     assert true == Enum.empty?(handle_columns)
-
-    # Revert policy change
-    reset_policies(policies, org_id)
   end
 
   test "disabling of a manifest", %{conn: conn, table: table, manifest: manifest, schema: schema} do
@@ -880,13 +868,5 @@ defmodule JumpWire.Proxy.PostgresTest do
     end)
 
     rows
-  end
-
-  defp reset_policies(policies, org_id) do
-    reset =
-      policies
-      |> Enum.map(fn policy -> {{org_id, policy.id}, policy} end)
-      |> Map.new()
-    JumpWire.GlobalConfig.set(:policies, org_id, reset)
   end
 end

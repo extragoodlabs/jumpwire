@@ -260,9 +260,6 @@ defmodule JumpWire.Proxy.MySQLTest do
     stats = MySQL.Setup.table_stats(manifest, schema)
     assert stats[:rows] == %{count: 4, target: 4}
     assert stats[:encrypted] == %{"value" => %{count: 4, target: 0}}
-
-    # Revert policy change
-    reset_policies(policies, org_id)
   end
 
   test "decrypted column stats reflect schema label changes", %{conn: conn, manifest: manifest, schema: schema, table: table} do
@@ -316,9 +313,6 @@ defmodule JumpWire.Proxy.MySQLTest do
     stats = MySQL.Setup.table_stats(manifest, schema)
     assert stats[:rows] == %{count: 4, target: 4}
     assert stats[:tokenized] == %{"phone" => %{count: 4, target: 0}}
-
-    # Revert policy change
-    reset_policies(policies, org_id)
   end
 
   test "detokenized column stats reflects schema label change", %{conn: conn, manifest: manifest, schema: schema, table: table} do
@@ -542,13 +536,5 @@ defmodule JumpWire.Proxy.MySQLTest do
     refute value == enc1
     refute value == enc2
     refute JumpWire.Vault.peek_tag!(enc1) == JumpWire.Vault.peek_tag!(enc2)
-  end
-
-  defp reset_policies(policies, org_id) do
-    reset =
-      policies
-      |> Enum.map(fn policy -> {{org_id, policy.id}, policy} end)
-      |> Map.new()
-    JumpWire.GlobalConfig.set(:policies, org_id, reset)
   end
 end
