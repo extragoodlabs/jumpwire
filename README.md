@@ -1,10 +1,25 @@
-# jumpwire
+<div align="center">
 
-[![jumpwire logo](./images/jumpwire-logo.png)](https://jumpwire.io)
+[![JumpWire](./images/jumpwire-logo.png)](https://jumpwire.io)
 
-![release workflow](https://github.com/extragoodlabs/jumpwire/actions/workflows/shipit.yaml/badge.svg)
+#### Identity Aware Database Gateway
 
-JumpWire is an engine that proxies database connections and applies security policies based on the data flowing through it. The fields within a database are assigned labels, either automatically or manually, making it easy to abstract the control of the data away from the raw structure of it.
+<!-- Nav header - Start -->
+[Home Page](https://jumpwire.io)
+·
+[Documentation](https://docs.jumpwire.io)
+·
+[Contact](#support-and-bug-reports)
+<!-- Nav header - END -->
+
+<!-- Badges - Start -->
+[![GitHub Release](https://img.shields.io/github/v/tag/extragoodlabs/jumpwire?style=flat-square&filter=*.*.*&label=Version)](https://github.com/extragoodlabs/jumpwire/pkgs/container/jumpwire)
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/extragoodlabs/jumpwire/shipit.yaml?style=flat-square&label=CI)
+<a href="https://ycombinator.com"><img src="https://img.shields.io/website?color=%23f26522&down_message=Y%20Combinator&label=Backed&logo=ycombinator&style=flat-square&up_message=Y%20Combinator&url=https%3A%2F%2Fwww.ycombinator.com"></a>
+<!-- Badges - End -->
+</div>
+
+JumpWire is a database gateway that applies security policies based on both the data flowing through it and the identity of the connecting user or application. Connections are proxied through JumpWire so that requests and responses can be inspected and modified. The fields within a database are assigned labels, either automatically or manually, making it easy to separate the control of data from the raw structure of it.
 
 Here are some examples of what JumpWire can do:
 
@@ -15,7 +30,7 @@ Here are some examples of what JumpWire can do:
 
 ## Features
 
-Currently JumpWire supports proxying database clients to both PostgreSQL and MySQL.
+Currently, JumpWire supports proxying database clients to both PostgreSQL and MySQL.
 
 Additional information is available in [our documentation](https://docs.jumpwire.io/).
 
@@ -45,7 +60,7 @@ When a client attempts to connect through the proxy without credentials, a magic
 
 ## Installation
 
-JumpWire is packages as Docker image and doesn't have any hard dependencies (beside the database being proxied, of course). The image is hosted on [GitHub Packages](https://github.com/extragoodlabs/jumpwire/pkgs/container/jumpwire)
+JumpWire is packaged as a Docker image and doesn't have any hard dependencies (besides the database being proxied, of course). The image is hosted on [GitHub Packages](https://github.com/extragoodlabs/jumpwire/pkgs/container/jumpwire)
 
 Create a configuration file called `jumpwire.yaml`. The following example configures JumpWire to proxy through to a PostgreSQL server running on the local host with a database named `test_db` and a table named `users`:
 
@@ -211,7 +226,6 @@ Operational metrics are collected by the JumpWire engine can exported to Prometh
 If you run into an error or unexpected behavior, please [file an issue](https://github.com/extragoodlabs/jumpwire/issues).
 
 All other questions and support requests should be asked in [GitHub discussions](https://github.com/extragoodlabs/jumpwire/discussions).
-
 
 ## Contributing
 
