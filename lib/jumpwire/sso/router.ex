@@ -32,12 +32,12 @@ defmodule JumpWire.SSO.Router do
   end
 
   get "/" do
-    idps = Application.get_env(:samly, Samly.Provider)[:identity_providers]
-    |> Enum.map(fn idp -> Map.get(idp, :id) end)
+    idps = Application.get_env(:samly, Samly.Provider)[:identity_providers] || []
+    idp_ids = Enum.map(idps, fn idp -> Map.get(idp, :id) end)
 
     conn
     |> put_resp_header("content-type", "application/json")
-    |> send_resp(200, Jason.encode!(idps))
+    |> send_resp(200, Jason.encode!(idp_ids))
   end
 
   @sso_result_template """
