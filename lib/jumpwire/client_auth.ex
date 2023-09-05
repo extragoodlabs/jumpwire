@@ -29,31 +29,12 @@ defmodule JumpWire.ClientAuth do
   def hook(_policy, _lifecycle), do: Task.completed(:ok)
 
   @doc """
-  Try finding the client in either the :client_auth table or the
-  deprecated :manifests table.
+  Try finding the client in the :client_auth table.
   """
+  @spec fetch(String.t, String.t) :: {:ok, ClientAuth.t} | {:error, atom}
   def fetch(org_id, client_id) do
     key = {org_id, client_id}
-    case JumpWire.GlobalConfig.fetch(:client_auth, key) do
-      {:ok, client} -> {:ok, client}
-      _ ->
-        case JumpWire.GlobalConfig.fetch(:manifests, key) do
-          {:ok, manifest} -> from_manifest(manifest)
-          err -> err
-        end
-    end
-  end
-
-  defp from_manifest(manifest) do
-    attrs = Map.from_struct(manifest)
-    case attrs do
-      %{classification: c} when not is_nil(c) ->
-        attrs
-        |> Map.put(:attributes, MapSet.new(["classification:#{c}"]))
-        |> from_json(manifest.organization_id)
-
-      _ -> attrs
-    end
+    JumpWire.GlobalConfig.fetch(:client_auth, key)
   end
 
   @doc """
