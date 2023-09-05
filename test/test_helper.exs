@@ -1,4 +1,4 @@
-ExUnit.start()
+ExUnit.start(trace: true)
 
 Mox.defmock(JumpWire.TeslaMock, for: Tesla.Adapter)
 Excontainers.ResourcesReaper.start_link()
