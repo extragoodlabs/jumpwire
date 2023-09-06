@@ -12,9 +12,7 @@ end
 
 
 with {:ok, port} <- System.fetch_env("JUMPWIRE_HTTP_PORT") do
-  config :jumpwire, JumpWire.Router,
-    enable_http: true,
-    http: [port: String.to_integer(port)]
+  config :jumpwire, JumpWire.Router, http: [port: String.to_integer(port)]
 end
 with {:ok, port} <- System.fetch_env("JUMPWIRE_HTTPS_PORT") do
   config :jumpwire, JumpWire.Router, https: [port: String.to_integer(port)]
@@ -23,12 +21,8 @@ end
 with {:ok, cert} <- System.fetch_env("JUMPWIRE_TLS_CERT"),
      {:ok, key} <- System.fetch_env("JUMPWIRE_TLS_KEY") do
   ssl_opts = [certfile: cert, keyfile: key]
-  config :jumpwire, JumpWire.Router,
-    enable_https: true,
-    https: ssl_opts
-  config :jumpwire, :proxy,
-    enable_tls: true,
-    server_ssl: ssl_opts
+  config :jumpwire, JumpWire.Router, https: ssl_opts
+  config :jumpwire, :proxy, server_ssl: ssl_opts
 end
 
 cacert = System.get_env("JUMPWIRE_TLS_CA", CAStore.file_path())
