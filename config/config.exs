@@ -54,7 +54,7 @@ config :hydrax, :supervisor,
 config :jumpwire, :proxy,
   secret_key: nil,
   client_ssl: [],
-  server_ssl: [],
+  server_ssl: [use_sni: true],
   parse_requests: true,
   parse_responses: true
 

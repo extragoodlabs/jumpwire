@@ -223,17 +223,9 @@ defmodule JumpWire.Proxy.Postgres do
   end
 
   @impl Database
-  def client_recv(<<8::32, 1234::16, 5679::16>>, state = %{server_ssl_opts: []}) do
-    # SSLRequest
-    Logger.warn("SSL request received from client but SSL is not configured")
-    :ok = Database.msg_send(state.client_socket, "N")
-    :ok = Database.socket_active(state.client_socket)
-    {:noreply, state, @timeout}
-  end
-
-  @impl Database
   def client_recv(<<8::32, 1234::16, 5679::16>>, state) do
     # SSLRequest
+    Logger.debug("Negotiating client SSL connection")
     with %Socket{socket: socket, transport: :ranch_tcp, state: :init} <- state.client_socket,
          :ok <- Database.msg_send(state.client_socket, "S"),
          {:ok, socket} <- :ranch_ssl.handshake(socket, state.server_ssl_opts, @timeout),
@@ -242,7 +234,7 @@ defmodule JumpWire.Proxy.Postgres do
       {:noreply, %{state | client_socket: client_socket}, @timeout}
     else
       err ->
-        Logger.warn("Unable to establish client SSL connection: #{inspect err}")
+        Logger.error("Unable to establish client SSL connection: #{inspect err}")
         Database.close_proxy(state)
     end
   end

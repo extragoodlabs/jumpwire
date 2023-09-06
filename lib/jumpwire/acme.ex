@@ -11,6 +11,10 @@ defmodule JumpWire.ACME do
     pem_key = X509.PrivateKey.from_pem!(key)
     der_cert = X509.Certificate.from_pem!(cert) |> X509.Certificate.to_der()
     der_chain = X509.Certificate.from_pem!(chain) |> X509.Certificate.to_der()
+    store_cert_config(name, pem_key, der_cert, der_chain)
+  end
+
+  defp store_cert_config(name, pem_key, der_cert, der_chain) do
     der_key = {:RSAPrivateKey, X509.PrivateKey.to_der(pem_key)}
     value = [key: der_key, cert: der_cert, cacert: der_chain]
     JumpWire.SSO.set_tls_cert(name, der_cert, pem_key)
@@ -20,16 +24,30 @@ defmodule JumpWire.ACME do
 
   def ensure_cert() do
     config = Application.get_env(:jumpwire, :acme) |> Map.new()
+
     if config[:generate] do
       ensure_cert(config)
     end
+
+    # Load a selfsigned cert as a fallback
+    generate_self_signed_cert()
+  end
+
+  defp generate_self_signed_cert() do
+    key = X509.PrivateKey.new_rsa(2048)
+    cert = X509.Certificate.self_signed(
+      key,
+      "/CN=JumpWire Self-Signed",
+      template: :server,
+      extensions: [
+        subject_alt_name: X509.Certificate.Extension.subject_alt_name(["localhost", "*"])
+      ]
+    ) |> X509.Certificate.to_der()
+    store_cert_config("selfsigned", key, cert, cert)
   end
 
   def ensure_cert(config = %{hostname: hostname}) when is_binary(hostname) do
     File.mkdir_p!(config.cert_dir)
-
-    # Load a selfsigned cert as a fallback
-    read_from_disk("selfsigned", config)
 
     JumpWire.TLS.cached_cert(hostname)
     |> then(fn
