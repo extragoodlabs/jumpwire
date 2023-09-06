@@ -20,7 +20,13 @@ defmodule JumpWire.SSO.SamlyPipeline do
     user_id = JumpWire.Metadata.get_org_id_as_uuid() |> Uniq.UUID.uuid5("#{idp_id}:#{subject_name}")
 
     group_attribute = Application.get_env(:jumpwire, :sso)[:group_attribute]
-    groups = Samly.get_attribute(assertion, group_attribute)
+    groups =
+      case Samly.get_attribute(assertion, group_attribute) do
+        nil ->
+          Logger.debug("No groups found for assertion '#{group_attribute}'")
+          []
+        groups -> groups
+      end
 
     Logger.debug("SSO authentication succeeded for #{user_id} with the following groups: #{inspect groups}")
     computed = %{org_id: org_id, groups: groups, id: user_id}
