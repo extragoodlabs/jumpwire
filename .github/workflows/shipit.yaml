@@ -79,7 +79,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - test
-    if: github.ref_type == 'tag'
+    if: github.ref_type == 'tag' || github.ref_name	== 'trunk'
     steps:
       - uses: actions/checkout@v3
       - name: Set up QEMU
@@ -89,7 +89,21 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
       - name: Docker metadata
-        id: meta
+        id: semver_meta
+        if: github.ref_type == 'tag'
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            ghcr.io/extragoodlabs/jumpwire
+            jumpwire/jumpwire
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha
+            type=sha,format=long
+      - name: Docker metadata
+        id: edge_meta
         uses: docker/metadata-action@v4
         with:
           images: |
@@ -97,9 +111,6 @@ jobs:
             jumpwire/jumpwire
           tags: |
             type=edge
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
             type=sha
             type=sha,format=long
           flavor: |
@@ -121,5 +132,5 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: ${{ steps.semver_meta.outputs.tags }},${{ steps.edge_meta.outputs.tags }}
           push: true
