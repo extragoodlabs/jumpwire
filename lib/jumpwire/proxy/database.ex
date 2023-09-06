@@ -203,17 +203,16 @@ defmodule JumpWire.Proxy.Database do
   def init({ref, transport, opts}) do
     {:ok, client_socket} = :ranch.handshake(ref)
     :ok = transport.setopts(client_socket, [:binary, active: :once])
-    flags = Application.get_env(:jumpwire, :proxy)
+    JumpWire.PubSub.subscribe("*")
+
+    proxy_opts = Application.get_env(:jumpwire, :proxy)
+
+    flags = proxy_opts
     |> Keyword.take([:parse_responses, :parse_requests])
     |> Map.new()
 
-    JumpWire.PubSub.subscribe("*")
-    proxy_opts = Application.get_env(:jumpwire, :proxy)
-    ssl_opts = if proxy_opts[:enable_tls] do
-      proxy_opts[:server_ssl] |> Keyword.put(:sni_fun, &JumpWire.TLS.sni_fun/1)
-    else
-      proxy_opts[:server_ssl]
-    end
+    ssl_opts = proxy_opts[:server_ssl]
+    |> Keyword.put(:sni_fun, &JumpWire.TLS.sni_fun/1)
 
     state = %{
       client_socket: %Socket{transport: transport, socket: client_socket},
