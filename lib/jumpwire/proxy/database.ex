@@ -213,7 +213,7 @@ defmodule JumpWire.Proxy.Database do
 
     ssl_opts = proxy_opts[:server_ssl]
     ssl_opts =
-      if ssl_opts[:use_sni] do
+      if proxy_opts[:use_sni] do
         Keyword.put(ssl_opts, :sni_fun, &JumpWire.TLS.sni_fun/1)
       else
         ssl_opts

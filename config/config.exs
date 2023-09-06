@@ -52,9 +52,10 @@ config :hydrax, :supervisor,
   ]
 
 config :jumpwire, :proxy,
+  use_sni: true,
   secret_key: nil,
   client_ssl: [],
-  server_ssl: [use_sni: true],
+  server_ssl: [],
   parse_requests: true,
   parse_responses: true
 

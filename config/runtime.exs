@@ -20,9 +20,11 @@ end
 
 with {:ok, cert} <- System.fetch_env("JUMPWIRE_TLS_CERT"),
      {:ok, key} <- System.fetch_env("JUMPWIRE_TLS_KEY") do
-  ssl_opts = [certfile: cert, keyfile: key, use_sni: false]
+  ssl_opts = [certfile: cert, keyfile: key]
   config :jumpwire, JumpWire.Router, https: ssl_opts
-  config :jumpwire, :proxy, server_ssl: ssl_opts
+  config :jumpwire, :proxy,
+    use_sni: false,
+    server_ssl: ssl_opts
 end
 
 cacert = System.get_env("JUMPWIRE_TLS_CA", CAStore.file_path())
