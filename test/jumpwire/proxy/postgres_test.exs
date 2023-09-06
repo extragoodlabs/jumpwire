@@ -134,7 +134,7 @@ defmodule JumpWire.Proxy.PostgresTest do
     end
 
     # update the proxy server to use the SSL cert
-    proxy_opts = Keyword.put(proxy_opts, :server_ssl, [certfile: certfile, keyfile: keyfile, verify_fun: &:ssl_verify_hostname.verify_fun/3])
+    proxy_opts = Keyword.put(proxy_opts, :server_ssl, [certfile: certfile, keyfile: keyfile, verify_fun: &:ssl_verify_hostname.verify_fun/3, use_sni: false])
     Application.put_env(:jumpwire, :proxy, proxy_opts)
 
     # connect with SSL

@@ -3,6 +3,8 @@ defmodule JumpWire.TLS do
   Handlers for interacting with cached TLS certificates.
   """
 
+  require Logger
+
   def cached_cert(hostname) when is_binary(hostname) do
     hostname = String.to_charlist(hostname)
     cached_cert(hostname)
@@ -26,6 +28,7 @@ defmodule JumpWire.TLS do
         cert_opts(cert)
 
       _ ->
+        Logger.warn("Missing certificate for #{hostname}, using a self-signed fallback certificate")
         case cached_cert('selfsigned') do
           {:ok, cert} -> cert_opts(cert)
           _ -> []

@@ -212,7 +212,12 @@ defmodule JumpWire.Proxy.Database do
     |> Map.new()
 
     ssl_opts = proxy_opts[:server_ssl]
-    |> Keyword.put(:sni_fun, &JumpWire.TLS.sni_fun/1)
+    ssl_opts =
+      if ssl_opts[:use_sni] do
+        Keyword.put(ssl_opts, :sni_fun, &JumpWire.TLS.sni_fun/1)
+      else
+        ssl_opts
+      end
 
     state = %{
       client_socket: %Socket{transport: transport, socket: client_socket},
