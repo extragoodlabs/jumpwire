@@ -1,5 +1,27 @@
 # Changelog
 
+## 3.2.0
+
+### Enhancements
+
+#### API
+
+- Return all connection info when generating a client token
+
+#### ACME
+
+- Generate a fallback TLS certificate without requiring ACME
+
+### Bug fixes
+
+#### SSO
+
+- Default groups from SAML assertions to an empty list
+
+#### TLS
+
+- Disable SNI based certificate lookup when explicitly specifying a TLS key and certificate file
+
 ## 3.1.0
 
 ### Enhancements
