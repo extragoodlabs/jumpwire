@@ -42,6 +42,7 @@ config :sentry,
 
 config :versioce,
   post_hooks: [
+    JumpWire.Versioce.ChangelogBump,
     Versioce.PostHooks.Git.Add,
     Versioce.PostHooks.Git.Commit,
     Versioce.PostHooks.Git.Tag,
@@ -50,7 +51,8 @@ config :versioce,
 config :versioce, :git,
   commit_message_template: "Bump version to v{version}",
   tag_template: "{version}",
-  tag_message_template: "Release v{version}"
+  tag_message_template: "Release v{version}",
+  additional_files: ["CHANGELOG.md"]
 
 secrets_path = Path.expand("#{config_env()}.secrets.exs", __DIR__)
 if File.exists?(secrets_path) do
