@@ -123,7 +123,7 @@ mkcert -install
 
 Next we generate the certs, valid for a localhost domain.
 ```shell
-mkcert localhost ::1
+mkcert localhost 127.0.0.1 ::1
 
 # Created a new certificate valid for the following names 📜
 #  - "localhost"
