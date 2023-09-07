@@ -113,7 +113,7 @@ Start the JumpWire gateway:
 
 ``` shell
 export ENCRYPTION_KEY=$(openssl rand -base64 32)
-export JUMPWIRE_ROOT_TOKEN=$(cat $HOME/.config/jwctl/.token)
+export JUMPWIRE_ROOT_TOKEN=$(cat /dev/urandom | base64 | head -c 64)
 docker run -d --name jumpwire \
   -p 4004:4004 -p 4443:4443 -p 3307:3307 -p 6432:6432 \
   -v $(pwd)/jumpwire.yaml:/etc/jumpwire/jumpwire.yaml \
@@ -166,7 +166,7 @@ With the container running, the JumpWire gateway can connect to databases that a
 To connect through the gateway to the database, the only change necessary is to update your application's connection string. JumpWire implements native database protocols, so there are no library or code changes necessary to connect to the gateway. Use `jwctl` to generate credentials that any database client can use:
 
 ```shell
-jwctl client token ccf334b5-2d5a-45ee-a6dd-c34caf99e4d4
+jwctl -u http://localhost:4000 -t "${JUMPWIRE_ROOT_TOKEN}" client token ccf334b5-2d5a-45ee-a6dd-c34caf99e4d4
 # [INFO] Token generated:
 
 # username: 0779b97a-c04a-48f9-9483-22e8b0487de4
