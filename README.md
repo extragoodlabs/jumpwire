@@ -161,7 +161,7 @@ jwctl -u http://localhost:4004 -t "${JUMPWIRE_ROOT_TOKEN}" status
 # }
 ```
 
-With the container running, the JumpWire gateway can connect to databases that are also running on the same host as the container, or accessible from the same host. This setup is ideally suited for testing JumpWire in a local development environment, or for small-scale apps that have a full tech stack on a single host.
+With the container running, the JumpWire gateway can connect to databases that are also running on the same host as the container, or accessible from the same host.
 
 To connect through the gateway to the database, the only change necessary is to update your application's connection string. JumpWire implements native database protocols, so there are no library or code changes necessary to connect to the gateway. Use `jwctl` to generate credentials that any database client can use:
 
