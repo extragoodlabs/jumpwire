@@ -85,6 +85,13 @@ defmodule JumpWire.Manifest do
 
   def hook(_manifest, _lifecycle), do: Task.completed(:ok)
 
+  @doc """
+  Retrieve the database name from the configuration of a SQL manifest.
+  """
+  def database_name(%Manifest{configuration: config}) do
+    Map.get(config, "database")
+  end
+
   def extract_schemas(manifest = %Manifest{root_type: :postgresql}) do
     JumpWire.Manifest.Postgresql.extract(manifest)
   end

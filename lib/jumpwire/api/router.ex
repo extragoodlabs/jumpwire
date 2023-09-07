@@ -109,11 +109,22 @@ defmodule JumpWire.API.Router do
         _ -> []
       end
 
-    case JumpWire.ClientAuth.fetch(org_id, id) do
-      {:ok, client} ->
+    with {:ok, client} <- JumpWire.ClientAuth.fetch(org_id, id),
+         {:ok, manifest} <- JumpWire.Manifest.fetch(org_id, client.manifest_id) do
         token = JumpWire.Proxy.sign_token(org_id, client.id, opts)
-        send_json_resp(conn, 200, %{token: token, id: client.id, manifest_id: client.manifest_id})
+        ports = JumpWire.Proxy.ports()
+        body = %{
+          token: token,
+          id: client.id,
+          manifest_id: manifest.id,
+          domain: JumpWire.Proxy.domain(),
+          port: ports[manifest.root_type],
+          protocol: manifest.root_type,
+          database: JumpWire.Manifest.database_name(manifest),
+        }
+        send_json_resp(conn, 200, body)
 
+    else
       err ->
         Logger.error("Could not retrieve client_auth: #{inspect err}")
         send_json_resp(conn, 400, %{error: "Invalid client ID"})

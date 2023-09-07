@@ -70,8 +70,9 @@ defmodule JumpWire.RouterTest do
   describe "client_auth" do
     setup do
       org_id = JumpWire.Metadata.get_org_id()
-      manifest_id = Uniq.UUID.uuid4()
-      {client, _token} = JumpWire.Phony.generate_client_auth({org_id, manifest_id}, nil)
+      manifest = JumpWire.Phony.generate_pg_manifest(org_id, skip_setup: true)
+      JumpWire.GlobalConfig.put(:manifests, {org_id, manifest.id}, manifest)
+      {client, _token} = JumpWire.Phony.generate_client_auth({org_id, manifest.id}, nil)
       token = JumpWire.API.Token.get_root_token()
       %{client: client, token: token}
     end
@@ -98,7 +99,16 @@ defmodule JumpWire.RouterTest do
       |> Router.call(@opts)
 
       assert conn.status == 200
-      assert {:ok, %{"token" => client_token}} = Jason.decode(conn.resp_body)
+      assert {:ok, body} = Jason.decode(conn.resp_body)
+      assert %{
+        "token" => client_token,
+        "protocol" => "postgresql",
+        "port" => port,
+        "database" => "postgres",
+        "manifest_id" => manifest_id,
+      } = body
+      assert manifest_id == client.manifest_id
+      refute is_nil(port)
       assert {:ok, {"org_jumpwire_test", client.id}} == JumpWire.Proxy.verify_token(client_token)
     end
 

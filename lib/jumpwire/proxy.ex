@@ -45,7 +45,7 @@ defmodule JumpWire.Proxy do
     api_opts = Application.get_env(:jumpwire, JumpWire.Router)
 
     %{
-      postgres: pg_proxy_opts[:port],
+      postgresql: pg_proxy_opts[:port],
       mysql: mysql_proxy_opts[:port],
       http: api_opts[:http][:port],
       https: api_opts[:https][:port]
