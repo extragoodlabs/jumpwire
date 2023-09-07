@@ -142,7 +142,7 @@ Version: x.x.x
 JumpWire's CLI, [jwctl](https://github.com/extragoodlabs/jwctl), can be used to validate that the gateway is running.
 
 ```shell
-jwctl -u http://localhost:4000 -t "${JUMPWIRE_ROOT_TOKEN}" status
+jwctl -u http://localhost:4004 -t "${JUMPWIRE_ROOT_TOKEN}" status
 # [INFO] Remote status:
 # {
 #   "clusters_joined": {},
