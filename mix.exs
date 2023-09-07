@@ -123,7 +123,7 @@ defmodule JumpWire.MixProject do
       {:git_hooks, "~> 0.6.3", only: :dev, runtime: false},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.0", only: [:dev], runtime: false},
-      {:versioce, "~> 1.1.2", only: :dev},
+      {:versioce, "~> 2.0.0", only: :dev},
       {:git_cli, "~> 0.3.0", only: :dev},
       {:excoveralls, "~> 0.10", only: :test},
       {:propcheck, "~> 1.4", only: [:test, :dev]},
