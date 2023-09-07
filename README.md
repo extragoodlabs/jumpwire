@@ -139,7 +139,7 @@ Version: x.x.x
 ************************************************************
 ```
 
-JumpWire's cli [jwctl](https://github.com/extragoodlabs/jwctl) can be used to validate the gateway is running.
+JumpWire's CLI, [jwctl](https://github.com/extragoodlabs/jwctl), can be used to validate that the gateway is running.
 
 ```shell
 jwctl -u http://localhost:4000 -t "${JUMPWIRE_ROOT_TOKEN}" status
