@@ -37,7 +37,8 @@ manifests:
     configuration:
       type: postgresql
       database: test_db
-      # when running JumpWire in Docker, use Docker host network
+      # when running JumpWire in Docker Desktop, use "host.docker.internal"
+      # when host networking is available (--network host), this can bet set to "localhost"
       hostname: host.docker.internal
       ssl: false
       port: 5432
