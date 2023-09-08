@@ -207,8 +207,6 @@ These ports can be changed using environmental variables as noted below.
 Check out these handy installation guides as a reference for configuring or deploying JumpWire in common use-case setups and public clouds.
 
 - [Login to database with Google Single Sign-On](./docs/sso-guide.md)
-- Encrypt sensitive data fields directly in database _(coming soon)_
-- Access AWS RDS using JumpWire, ECS and Terraform _(coming soon)_
 
 ## Configuration
 
