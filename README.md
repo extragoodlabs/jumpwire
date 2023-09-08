@@ -113,7 +113,7 @@ Start the JumpWire gateway:
 
 ``` shell
 export ENCRYPTION_KEY=$(openssl rand -base64 32)
-export JUMPWIRE_ROOT_TOKEN=$(cat /dev/urandom | base64 | head -c 64)
+export JUMPWIRE_ROOT_TOKEN=$(openssl rand -base64 32)
 docker run -d --name jumpwire \
   -p 4004:4004 -p 4443:4443 -p 3307:3307 -p 6432:6432 \
   -v $(pwd)/jumpwire.yaml:/etc/jumpwire/jumpwire.yaml \

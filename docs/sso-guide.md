@@ -127,9 +127,10 @@ mkcert localhost 127.0.0.1 ::1
 
 # Created a new certificate valid for the following names 📜
 #  - "localhost"
+#  - "127.0.0.1"
 #  - "::1"
 
-# The certificate is at "./localhost+1.pem" and the key at "./localhost+1-key.pem" ✅
+# The certificate is at "./localhost+2.pem" and the key at "./localhost+2-key.pem" ✅
 
 # It will expire on 6 December 2025 🗓
 ```
@@ -140,15 +141,15 @@ docker stop jumpwire
 docker run -d --rm --name jumpwire \
 -p 4004:4004 -p 4443:4443 -p 6432:6432 \
 -v $(pwd)/jumpwire.yaml:/etc/jumpwire/jumpwire.yaml \
--v $(pwd)/localhost+1.pem:/etc/jumpwire/localhost+1.pem \
--v $(pwd)/localhost+1-key.pem:/etc/jumpwire/localhost+1-key.pem \
+-v $(pwd)/localhost+2.pem:/etc/jumpwire/localhost.pem \
+-v $(pwd)/localhost+2-key.pem:/etc/jumpwire/localhost-key.pem \
 -v $(mkcert -CAROOT)/rootCA.pem:/etc/jumpwire/ca.pem \
 -e JUMPWIRE_POSTGRES_PROXY_PORT=6432 \
 -e JUMPWIRE_CONFIG_PATH=/etc/jumpwire \
 -e JUMPWIRE_ENCRYPTION_KEY="${ENCRYPTION_KEY}" \
 -e JUMPWIRE_ROOT_TOKEN="${JUMPWIRE_ROOT_TOKEN}" \
--e JUMPWIRE_TLS_CERT=/etc/jumpwire/localhost+1.pem \
--e JUMPWIRE_TLS_KEY=/etc/jumpwire/localhost+1-key.pem \
+-e JUMPWIRE_TLS_CERT=/etc/jumpwire/localhost.pem \
+-e JUMPWIRE_TLS_KEY=/etc/jumpwire/localhost-key.pem \
 -e JUMPWIRE_TLS_CA=/etc/jumpwire/ca.pem \
 ghcr.io/extragoodlabs/jumpwire:latest
 ```
@@ -237,8 +238,8 @@ docker run -d --rm --name jumpwire \
 -p 4004:4004 -p 4443:4443 -p 6432:6432 \
 -v $(pwd)/jumpwire.yaml:/etc/jumpwire/jumpwire.yaml \
 -v $(pwd)/GoogleIDPMetadata.xml:/etc/jumpwire/idp.xml \
--v $(pwd)/localhost+1.pem:/etc/jumpwire/localhost+1.pem \
--v $(pwd)/localhost+1-key.pem:/etc/jumpwire/localhost+1-key.pem \
+-v $(pwd)/localhost+2.pem:/etc/jumpwire/localhost.pem \
+-v $(pwd)/localhost+2-key.pem:/etc/jumpwire/localhost-key.pem \
 -v $(mkcert -CAROOT)/rootCA.pem:/etc/jumpwire/ca.pem \
 -e JUMPWIRE_CONFIG_PATH=/etc/jumpwire \
 -e JUMPWIRE_ENCRYPTION_KEY="${ENCRYPTION_KEY}" \
@@ -247,8 +248,8 @@ docker run -d --rm --name jumpwire \
 -e JUMPWIRE_SSO_METADATA_PATH=/etc/jumpwire/idp.xml \
 -e JUMPWIRE_SSO_IDP=google \
 -e JUMPWIRE_SSO_SIGNED_ENVELOPES=false \
--e JUMPWIRE_TLS_CERT=/etc/jumpwire/localhost+1.pem \
--e JUMPWIRE_TLS_KEY=/etc/jumpwire/localhost+1-key.pem \
+-e JUMPWIRE_TLS_CERT=/etc/jumpwire/localhost.pem \
+-e JUMPWIRE_TLS_KEY=/etc/jumpwire/localhost-key.pem \
 -e JUMPWIRE_TLS_CA=/etc/jumpwire/ca.pem \
 ghcr.io/extragoodlabs/jumpwire:latest
 ```
