@@ -291,13 +291,6 @@ defmodule JumpWire.Proxy.SQL.Parser do
       {:ok, _value} -> acc
       _ ->
         Logger.warn("Unsupported statement: #{inspect statement}")
-
-        [
-          [%Ident{quote_style: nil, value: "r"}, %Ident{quote_style: nil, value: "rngsubtype"}],
-          {:number, "0", false}
-        ]
-
-
         acc
     end
   end
