@@ -46,19 +46,19 @@ JumpWire automatically detects and labels sensitive data in your existing schema
 
 ### Field-level encryption
 
-All fields for a configured label are automatically encrypted, either as they pass through the JumpWire proxy engine or directly in the database. Specific applications can be configured to decrypt the data through JumpWire automatically, without making any code changes or having to perform extra queries.
+All fields for a configured label are automatically encrypted, either as they pass through the JumpWire proxy gateway or directly in the database. Specific applications can be configured to decrypt the data through JumpWire automatically, without making any code changes or having to perform extra queries.
 
 ## How it works
 
-The JumpWire engine is designed to be deployed in front of your existing database. Client configurations are updated to point to JumpWire instead of directly to the engine, and JumpWire proxies those connections through.
+The JumpWire gateway is designed to be deployed in front of your existing database. Client configurations are updated to point to JumpWire instead of directly to the gateway, and JumpWire proxies those connections through to the destination database.
 
-JumpWire works directly with the database protocol. All standard clients work with the engine without any code changes needed.
+JumpWire directly implements native database protocols. All standard clients work with the gateway without any code changes needed.
 
 When a client attempts to connect through the proxy without credentials, a magic login link is generated. Using the [jwctl CLI](https://github.com/extragoodlabs/jwctl) or an integration available with JumpWire Enterprise, the login attempt can be linked to an SSO user and associated permissions.
 
 ![DB Authorization Architecture](/images/DB%20Authorization%20Architecture.png)
 
-## Installation
+## Quick Install
 
 JumpWire is packaged as a Docker image and doesn't have any hard dependencies (besides the database being proxied, of course). The image is hosted on [GitHub Packages](https://github.com/extragoodlabs/jumpwire/pkgs/container/jumpwire)
 
@@ -67,18 +67,18 @@ Create a configuration file called `jumpwire.yaml`. The following example config
 ```yaml
 # configure a postgresql database
 manifests:
-- id: 0779b97a-c04a-48f9-9483-22e8b0487de4
-  name: my local db
-  root_type: postgresql
-  credentials:
-    username: postgres
-    password: postgres
-  configuration:
-    type: postgresql
-    database: test_db
-    hostname: host.docker.internal
-    ssl: false
-    port: 5432
+  - id: 0779b97a-c04a-48f9-9483-22e8b0487de4
+    name: my local db
+    root_type: postgresql
+    credentials:
+      username: postgres
+      password: postgres
+    configuration:
+      type: postgresql
+      database: test_db
+      hostname: host.docker.internal
+      ssl: false
+      port: 5432
 
 # set labels on fields
 proxy_schemas:
@@ -90,6 +90,12 @@ proxy_schemas:
       name: pii
       address: pii
       favorite_cheese: secret
+
+# create a client for the application connections
+client_auth:
+  - id: ccf334b5-2d5a-45ee-a6dd-c34caf99e4d4
+    name: psql
+    manifest_id: 0779b97a-c04a-48f9-9483-22e8b0487de4
 
 groups:
   # Engineers will be able to do anything to data labeled
@@ -103,23 +109,25 @@ groups:
     - delete:secret
 ```
 
-Start the JumpWire engine:
+Start the JumpWire gateway:
 
 ``` shell
 export ENCRYPTION_KEY=$(openssl rand -base64 32)
+export JUMPWIRE_ROOT_TOKEN=$(openssl rand -base64 32)
 docker run -d --name jumpwire \
   -p 4004:4004 -p 4443:4443 -p 3307:3307 -p 6432:6432 \
   -v $(pwd)/jumpwire.yaml:/etc/jumpwire/jumpwire.yaml \
   -e JUMPWIRE_CONFIG_PATH=/etc/jumpwire \
   -e JUMPWIRE_ENCRYPTION_KEY="${ENCRYPTION_KEY}" \
   -e JUMPWIRE_POSTGRES_PROXY_PORT=6432 \
+  -e JUMPWIRE_ROOT_TOKEN="${JUMPWIRE_ROOT_TOKEN}" \
   -e JUMPWIRE_MYSQL_PROXY_PORT=3307 \
   ghcr.io/extragoodlabs/jumpwire:latest
 ```
 
-Setting proxy ports depends on whether there are other services running on the same ports on the host. For example, if a PostgreSQL database is running on the same host as the container, it's necessary to remap JumpWire engine's proxy port to something other than 5432, since that port is occupied by the local PostgreSQL database. This example maps proxy ports to a non-standard port number to avoid conflicts with locally running databases.
+Setting proxy ports depends on whether there are other services running on the same ports on the host. For example, if a PostgreSQL database is running on the same host as the container, it's necessary to map the gateway's proxy port to something other than 5432, since that port is occupied by the local PostgreSQL database. The example above maps proxy ports to a non-standard port number (`6432` and `3307`) to avoid conflicts with locally running databases.
 
-If the engine starts up correctly, the following message should be printed to the logs:
+If the gateway starts up correctly, the following message should be printed to the logs:
 
 ``` text
 ************************************************************
@@ -131,7 +139,51 @@ Version: x.x.x
 ************************************************************
 ```
 
-With the container running, the JumpWire engine can connect to databases that are also running on the same host as the container, or accessible from the same host. This setup is ideally suited for testing JumpWire in a local development environment, or for small-scale apps that have a full tech stack on a single host.
+JumpWire's CLI, [jwctl](https://github.com/extragoodlabs/jwctl), can be used to validate that the gateway is running.
+
+```shell
+jwctl -u http://localhost:4004 -t "${JUMPWIRE_ROOT_TOKEN}" status
+# [INFO] Remote status:
+# {
+#   "clusters_joined": {},
+#   "credential_adapters": [],
+#   "domain": null,
+#   "key_adapters": [
+#     "DeltaCrdt"
+#   ],
+#   "ports": {
+#     "http": 4004,
+#     "https": 4443,
+#     "mysql": 3306,
+#     "postgres": 6432
+#   },
+#   "web_connected": false
+# }
+```
+
+With the container running, the JumpWire gateway can connect to databases that are also running on the same host as the container, or accessible from the same host.
+
+To connect through the gateway to the database, the only change necessary is to update your application's connection string. JumpWire implements native database protocols, so there are no library or code changes necessary to connect to the gateway. Use `jwctl` to generate credentials that any database client can use:
+
+```shell
+jwctl -u http://localhost:4000 -t "${JUMPWIRE_ROOT_TOKEN}" client token ccf334b5-2d5a-45ee-a6dd-c34caf99e4d4
+# [INFO] Token generated:
+
+# username: 0779b97a-c04a-48f9-9483-22e8b0487de4
+# password: SFMyNTY.g2gDaAJtAAAAC29yZ19nZW5l...
+```
+
+Now these credentials can be used to connect through the gateway to the database, using any client.
+
+```shell
+psql -h localhost -p 6432 -U 0779b97a-c04a-48f9-9483-22e8b0487de4 -W -d test_db
+# Password:
+# psql (15.3 (Ubuntu 15.3-1.pgdg22.04+1))
+# SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, compression: off)
+# Type "help" for help.
+
+# test_db=#
+```
 
 ### Kubernetes
 
@@ -143,12 +195,18 @@ The following ports are used by default:
 
 - `4004` - HTTP server for JSON API requests
 - `4443` - HTTPS server for JSON API requests
-- `9568` - Endpoint that exposes Prometheus telemetry metrics. Useful for reporting on a variety of operations from the engine container, as well as performance.
+- `9568` - Endpoint that exposes Prometheus telemetry metrics. Useful for reporting on a variety of operations from the gateway container, as well as performance.
 - `5432` - Client connections for PostgreSQL.
 - `3306` - Client connections for MySQL.
 - `4369` - Internal port used for nodes in the same cluster to connect to each other. When running more than one JumpWire node, his must be exposed to other nodes in the cluster but should not be publicly accessible.
 
-These ports can be changed using envirionmenal variables as noted below.
+These ports can be changed using environmental variables as noted below.
+
+## Installation Guides
+
+Check out these handy installation guides as a reference for configuring or deploying JumpWire in common use-case setups and public clouds.
+
+- [Login to database with Google Single Sign-On](./docs/sso-guide.md)
 
 ## Configuration
 
@@ -169,7 +227,7 @@ The available configuration options are detailed in [our documentation](https://
 | RELEASE_COOKIE | - | Shared secret used for distributed connectivity. Must be identical on all nodes in the cluster. |
 | JUMPWIRE_TOKEN | - | Token used to authenticate with the web interface. |
 | JUMPWIRE_FRONTEND | - | WebSocket URL to connect to when using a web controller |
-| JUMPWIRE_DOMAIN| localhost | Domain of the JumpWire engine |
+| JUMPWIRE_DOMAIN| localhost | Domain of the JumpWire gateway |
 | JUMPWIRE_HTTP_PORT | 4004 | Port to listen for HTTP request. |
 | JUMPWIRE_HTTPS_PORT | 4443 | Port to listen for HTTPS request. |
 | JUMPWIRE_PROMETHEUS_PORT | 9568 | Port to serve Prometheus stats on, under the `/metrics` endpoint. |
@@ -213,11 +271,11 @@ HashiCorp Vault and AWS KMS are supported as encryption key stores. More informa
 
 ## CLI
 
-The JumpWire engine can be interacted with using the [jwctl](https://github.com/extragoodlabs/jwctl) CLI tool. jwctl connects to the API of a running JumpWire cluster to perform administrative tasks and authenticate proxied database connections using SSO credentials.
+The JumpWire gateway can be interacted with using the [jwctl](https://github.com/extragoodlabs/jwctl) CLI tool. jwctl connects to the API of a running JumpWire cluster to perform administrative tasks and authenticate proxied database connections using SSO credentials.
 
 ## Telemetry
 
-Operational metrics are collected by the JumpWire engine can exported to Prometheus, StatsD, or CloudWatch. A full list of metrics is available in [our documentation](https://docs.jumpwire.io/observability).
+Operational metrics are collected by the JumpWire gateway can exported to Prometheus, StatsD, or CloudWatch. A full list of metrics is available in [our documentation](https://docs.jumpwire.io/observability).
 
 ## Support and bug reports
 
@@ -235,6 +293,6 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) to learn about project code style and pr
 
 This repo is licensed under [Apache 2.0](LICENSE).
 
-An enterprise version of JumpWire is also available with additional features and a web interface for controlling the engine.
+An enterprise version of JumpWire is also available with additional features and a web interface for controlling the gateway.
 
 To learn more, visit our [pricing page](https://jumpwire.io/pricing).
