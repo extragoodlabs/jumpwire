@@ -22,6 +22,7 @@ defmodule JumpWire.Proxy.SQL.Parser do
       field :op, :select | :update | :delete | :insert, enforce: true
       field :schema, String.t()
       field :table, String.t()
+      field :tables, [String.t()], default: []
       field :table_aliases, map(), default: %{}
     end
 
@@ -29,6 +30,18 @@ defmodule JumpWire.Proxy.SQL.Parser do
       Map.get(acc.table_aliases, field.table)
     end
     def get_table_alias(_acc, _field), do: nil
+
+    def put_field(acc, field = %Field{column: :wildcard, table: nil}) do
+      # map wildcards to every table. this is necessary for getting all
+      # fields in a join
+      Enum.reduce(acc.tables, acc, fn {schema, table}, acc ->
+        schema = schema || JumpWire.Proxy.SQL.Parser.system_schema(table)
+        field = %{field | schema: schema, table: table}
+        Map.update!(acc, :request, fn req ->
+          Request.put_field(req, acc.op, field)
+        end)
+      end)
+    end
 
     def put_field(acc, field) do
       {schema, table} =
@@ -265,9 +278,9 @@ defmodule JumpWire.Proxy.SQL.Parser do
   end
 
   def find_fields(acc, {:qualified_wildcard, name, _options}) do
-    acc
-    |> find_table(name)
-    |> Traveler.put_field(%Field{column: :wildcard})
+    acc = find_table(acc, name)
+    field = %Field{column: :wildcard, table: acc.table, schema: acc.schema}
+    Traveler.put_field(acc, field)
   end
 
   def find_fields(acc, index = %Statement.ArrayIndex{}) do
@@ -306,7 +319,9 @@ defmodule JumpWire.Proxy.SQL.Parser do
     end
   end
 
-  def find_table(acc, [table]), do: find_table(acc, table)
+  def find_table(acc, tables) when is_list(tables) do
+    Enum.reduce(tables, acc, fn table, acc -> find_table(acc, table) end)
+  end
 
   def find_table(acc, %Statement.Join{relation: relation}) do
     find_table(acc, relation)
@@ -337,13 +352,21 @@ defmodule JumpWire.Proxy.SQL.Parser do
         nil -> acc
       end
 
-    %{acc | schema: schema, table: table}
+    acc
+    |> Map.update!(:tables, fn t -> [{schema, table} | t] end)
+    |> Map.put(:schema, schema)
+    |> Map.put(:table, table)
   end
   def find_table(acc, %Ident{value: table}) do
-    %{acc | table: table}
+    acc
+    |> Map.update!(:tables, fn t -> [{nil, table} | t] end)
+    |> Map.put(:table, table)
   end
   def find_table(acc, [%Ident{value: schema}, %Ident{value: table}]) do
-    %{acc | schema: schema, table: table}
+    acc
+    |> Map.update!(:tables, fn t -> [{schema, table} | t] end)
+    |> Map.put(:schema, schema)
+    |> Map.put(:table, table)
   end
   def find_table(acc, _), do: %{acc | schema: nil, table: nil}
 end

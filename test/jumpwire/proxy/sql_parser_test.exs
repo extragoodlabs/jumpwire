@@ -550,6 +550,16 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     ]
   end
 
+  test "parsing implicit cross join" do
+    query = "SELECT * FROM pg_catalog.pg_collation, pg_catalog.pg_type"
+    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, request} = Parser.to_request(statement)
+    assert request.select == [
+      %Field{schema: "pg_catalog", table: "pg_collation", column: :wildcard},
+      %Field{schema: "pg_catalog", table: "pg_type", column: :wildcard},
+    ]
+  end
+
   defp assert_table_select(statement, name) do
     assert %Query{
       body: %Select{
