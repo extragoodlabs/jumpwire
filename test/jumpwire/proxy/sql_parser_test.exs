@@ -628,6 +628,16 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     ]
   end
 
+  test "parsing of SUBSTRING statements" do
+    query = "SELECT substring(name, 1, name_len) FROM users;"
+    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, request} = Parser.to_request(statement)
+    assert request.select == [
+      %Field{table: "users", column: "name_len"},
+      %Field{table: "users", column: "name"},
+    ]
+  end
+
   defp assert_table_select(statement, name) do
     assert %Query{
       body: %Select{
