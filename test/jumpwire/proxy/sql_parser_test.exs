@@ -616,6 +616,18 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     assert {:ok, _request} = Parser.to_request(statement)
   end
 
+  test "parsing of TRIM statements" do
+    query = """
+    SELECT trim(trailing ';' from pg_catalog.pg_get_ruledef(r.oid, true))
+    FROM pg_catalog.pg_rewrite r;
+    """
+    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, request} = Parser.to_request(statement)
+    assert request.select == [
+      %Field{schema: "pg_catalog", table: "pg_rewrite", column: "oid"},
+    ]
+  end
+
   defp assert_table_select(statement, name) do
     assert %Query{
       body: %Select{
