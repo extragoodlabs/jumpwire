@@ -12,7 +12,7 @@ defmodule JumpWire.Proxy.SQL.Statement do
   @typedoc """
   https://docs.rs/sqlparser/latest/sqlparser/ast/enum.TableFactor.html
   """
-  @type table_factor() :: Table.t() | any()
+  @type table_factor() :: Table.t() | Derived.t() | TableFunction.t() | UNNEST.t() | NestedJoin.t() | Pivot.t()
 
   @typedoc """
   https://docs.rs/sqlparser/latest/sqlparser/ast/enum.FunctionArgExpr.html
@@ -121,6 +121,39 @@ defmodule JumpWire.Proxy.SQL.Statement do
     field :alias, Statement.TableAlias.t()
     field :args, [Statement.function_arg()]
     field :with_hints, [Statement.expr()]
+  end
+
+  typedstruct module: Derived do
+    field :lateral, boolean()
+    field :subquery, Statement.Query.t()
+    field :alias, Statement.TableAlias.t()
+  end
+
+  typedstruct module: TableFunction do
+    field :expr, Statement.expr()
+    field :alias, Statement.TableAlias.t() | nil
+  end
+
+  typedstruct module: UNNEST do
+    field :alias, Statement.TableAlias.t() | nil
+    field :array_exprs, [Statement.expr()]
+    field :with_offset, boolean()
+    field :with_offset_alias, Statement.Ident.t() | nil
+  end
+
+  typedstruct module: NestedJoin do
+    field :table_with_joins, Statement.TableWithJoins.t()
+    field :alias, Statement.TableAlias.t() | nil
+  end
+
+  # Only used by Snowflake
+  typedstruct module: Pivot do
+    field :name, Statement.object_name()
+    field :table_alias, Statement.TableAlias.t() | nil
+    field :aggregate_function, Statement.expr()
+    field :value_column, [Statement.Ident.t()]
+    field :pivot_values, [Statement.value()]
+    field :pivot_alias, Statement.TableAlias.t() | nil
   end
 
   typedstruct module: Join do
