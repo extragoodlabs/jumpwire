@@ -36,8 +36,5 @@ defmodule JumpWire.Proxy.SQL.Value do
 
   def from_expr(:null), do: {:ok, nil}
 
-  def from_expr(expr) do
-    Logger.debug("Cannot parse SQL expression: #{inspect expr}")
-    :error
-  end
+  def from_expr(_), do: :error
 end

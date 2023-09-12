@@ -516,6 +516,40 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     assert {:ok, _request} = Parser.to_request(tz_statement)
   end
 
+  test "parsing of COLLATE statement" do
+    query = """
+    SELECT c.oid, n.nspname, c.relname
+    FROM pg_catalog.pg_class c
+    LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE c.relname OPERATOR(pg_catalog.~) '^(test_db)$' COLLATE pg_catalog.default
+      AND pg_catalog.pg_table_is_visible(c.oid)
+    ORDER BY 2, 3;
+    """
+    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, request} = Parser.to_request(statement)
+    assert request.select == [
+      %Field{schema: "pg_catalog", table: "pg_class", column: "oid"},
+      %Field{schema: "pg_catalog", table: "pg_class", column: "relname"},
+      %Field{schema: "pg_catalog", table: "pg_class", column: "relname"},
+      %Field{schema: "pg_catalog", table: "pg_namespace", column: "nspname"},
+      %Field{schema: "pg_catalog", table: "pg_class", column: "oid"},
+      %Field{schema: "pg_catalog", table: "pg_class", column: "relnamespace"},
+      %Field{schema: "pg_catalog", table: "pg_namespace", column: "oid"},
+    ]
+  end
+
+  test "parsing of cast" do
+    query = """
+    SELECT c.reloftype::pg_catalog.regtype::pg_catalog.text
+    FROM pg_catalog.pg_class c;
+    """
+    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, request} = Parser.to_request(statement)
+    assert request.select == [
+      %Field{schema: "pg_catalog", table: "pg_class", column: "reloftype"},
+    ]
+  end
+
   defp assert_table_select(statement, name) do
     assert %Query{
       body: %Select{

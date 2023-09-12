@@ -239,6 +239,10 @@ defmodule JumpWire.Proxy.SQL.Parser do
     Enum.reduce(joins, acc, fn join, acc -> find_fields(acc, join) end)
   end
 
+  def find_fields(acc, [table = %Statement.TableWithJoins{} | rest]) do
+    acc |> find_fields(table) |> find_fields(rest)
+  end
+
   def find_fields(acc, %Statement.Join{join_operator: :none}), do: acc
   def find_fields(acc, %Statement.Join{join_operator: :natural}), do: acc
   def find_fields(acc, %Statement.Join{join_operator: expr}) do
@@ -278,6 +282,11 @@ defmodule JumpWire.Proxy.SQL.Parser do
     |> find_fields(expr)
   end
 
+  def find_fields(acc, %Statement.Collate{expr: expr}), do: find_fields(acc, expr)
+  def find_fields(acc, %Statement.Cast{expr: expr}), do: find_fields(acc, expr)
+  def find_fields(acc, %Statement.TryCast{expr: expr}), do: find_fields(acc, expr)
+  def find_fields(acc, %Statement.SafeCast{expr: expr}), do: find_fields(acc, expr)
+
   def find_fields(acc, [expr]), do: find_fields(acc, expr)
 
   def find_fields(acc, []), do: acc
@@ -287,6 +296,8 @@ defmodule JumpWire.Proxy.SQL.Parser do
   def find_fields(acc, data) when is_binary(data), do: acc
 
   def find_fields(acc, statement) do
+    # Check if this is a simple value. If not, it is a statement that
+    # the parser does not yet support.
     case Value.from_expr(statement) do
       {:ok, _value} -> acc
       _ ->
