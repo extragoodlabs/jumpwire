@@ -311,6 +311,15 @@ defmodule JumpWire.Proxy.SQL.Parser do
   def find_fields(acc, %Statement.Cast{expr: expr}), do: find_fields(acc, expr)
   def find_fields(acc, %Statement.TryCast{expr: expr}), do: find_fields(acc, expr)
   def find_fields(acc, %Statement.SafeCast{expr: expr}), do: find_fields(acc, expr)
+  def find_fields(acc, %Statement.Extract{expr: expr}), do: find_fields(acc, expr)
+  def find_fields(acc, %Statement.Ceil{expr: expr}), do: find_fields(acc, expr)
+  def find_fields(acc, %Statement.Floor{expr: expr}), do: find_fields(acc, expr)
+
+  def find_fields(acc, query = %Statement.Position{}) do
+    acc
+    |> find_fields(query.expr)
+    |> find_fields(query.in)
+  end
 
   def find_fields(acc, query = %Statement.InList{}) do
     acc = find_fields(acc, query.expr)
