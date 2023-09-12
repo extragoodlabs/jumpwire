@@ -340,8 +340,8 @@ defmodule JumpWire.Proxy.Postgres do
          {:ok, requests} <- query_statements_to_requests(statements) do
       handle_client_query(requests, statements, data, state)
     else
-      _ ->
-        Logger.warn("Unable to parse PostgreSQL statement")
+      err ->
+        Logger.warn("Unable to parse PostgreSQL statement: #{inspect err}")
         :ok = Database.msg_send(state.db_socket, data)
         :ok = Database.socket_active(state.client_socket)
         {:noreply, state}

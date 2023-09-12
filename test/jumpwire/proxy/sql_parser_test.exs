@@ -443,19 +443,19 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     assert {:ok, [statement]} = Parser.parse_postgresql(query)
     assert {:ok, request} = Parser.to_request(statement)
     assert request.select == [
-     %Field{table: nil, column: "days_worked"},
-     %Field{table: nil, column: "days_worked"},
-     %Field{table: nil, column: "last_name"},
-     %Field{table: nil, column: "first_name"},
-     %Field{table: "rental", column: "rental_date"},
-     %Field{table: "rental", column: "rental_date"},
-     %Field{table: "rental", column: "staff_id"},
-     %Field{table: "staff", column: "password"},
-     %Field{table: "staff", column: "first_name"},
-     %Field{table: "staff", column: "staff_id"},
-     %Field{table: "workers", column: "staff_id"},
-     %Field{table: "rental_days", column: "staff_id"}
-   ]
+      %Field{table: "rental_days", column: "days_worked"},
+      %Field{table: "rental_days", column: "days_worked"},
+      %Field{table: "rental_days", column: "last_name"},
+      %Field{table: "rental_days", column: "first_name"},
+      %Field{table: "workers", column: "staff_id"},
+      %Field{table: "rental_days", column: "staff_id"},
+      %Field{table: "rental", column: "rental_date"},
+      %Field{table: "rental", column: "rental_date"},
+      %Field{table: "rental", column: "staff_id"},
+      %Field{table: "staff", column: "password"},
+      %Field{table: "staff", column: "first_name"},
+      %Field{table: "staff", column: "staff_id"},
+    ]
   end
 
   test "parsing of postgres ORM startup query" do
@@ -558,6 +558,62 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
       %Field{schema: "pg_catalog", table: "pg_collation", column: :wildcard},
       %Field{schema: "pg_catalog", table: "pg_type", column: :wildcard},
     ]
+  end
+
+  test "parsing of union join" do
+    query = """
+    SELECT pubname
+    FROM pg_catalog.pg_publication p
+    JOIN pg_catalog.pg_publication_rel pr ON p.oid = pr.prpubid
+    WHERE pr.prrelid = '155324'
+    UNION ALL
+    SELECT pubname
+    FROM pg_catalog.pg_publication p
+    WHERE p.puballtables AND pg_catalog.pg_relation_is_publishable('1234');
+    """
+    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, request} = Parser.to_request(statement)
+    assert request.select == [
+      %Field{schema: "pg_catalog", table: "pg_publication", column: "puballtables"},
+      %Field{schema: "pg_catalog", table: "pg_publication", column: "pubname"},
+      %Field{schema: "pg_catalog", table: "pg_publication_rel", column: "prrelid"},
+      %Field{schema: "pg_catalog", table: "pg_publication", column: "pubname"},
+      %Field{schema: "pg_catalog", table: "pg_publication_rel", column: "prpubid"},
+      %Field{schema: "pg_catalog", table: "pg_publication", column: "oid"},
+
+    ]
+  end
+
+  test "parsing of subquery membership" do
+    query = """
+    SELECT conname, conrelid::pg_catalog.regclass AS ontable,
+           pg_catalog.pg_get_constraintdef(oid, true) AS condef
+    FROM pg_catalog.pg_constraint c
+    WHERE confrelid IN (SELECT pg_catalog.pg_partition_ancestors('1234')
+                        UNION ALL VALUES ('1234'::pg_catalog.regclass))
+    AND contype = 'f' AND conparentid = 0
+    ORDER BY conname;
+    """
+    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, request} = Parser.to_request(statement)
+    assert request.select == [
+      %Field{schema: "pg_catalog", table: "pg_constraint", column: "conparentid"},
+      %Field{schema: "pg_catalog", table: "pg_constraint", column: "contype"},
+      %Field{schema: "pg_catalog", table: "pg_constraint", column: "confrelid"},
+      %Field{schema: "pg_catalog", table: "pg_constraint", column: "oid"},
+      %Field{schema: "pg_catalog", table: "pg_constraint", column: "conrelid"},
+      %Field{schema: "pg_catalog", table: "pg_constraint", column: "conname"},
+    ]
+  end
+
+  @tag :skip
+  # skipping until WITH ORDINALITY is supported upstream
+  test "parsing queries with ordinality" do
+    query = """
+    SELECT * FROM unnest(ARRAY['a', 'b', 'c']) WITH ORDINALITY;
+    """
+    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, _request} = Parser.to_request(statement)
   end
 
   defp assert_table_select(statement, name) do

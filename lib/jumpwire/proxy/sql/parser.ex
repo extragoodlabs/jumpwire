@@ -150,12 +150,28 @@ defmodule JumpWire.Proxy.SQL.Parser do
   def to_request(_), do: {:error, :invalid}
 
   def find_fields(acc, query = %Statement.Query{body: select = %Statement.Select{}}) do
+    acc
+    |> find_fields(query.with)
+    |> find_fields(select)
+  end
+
+  def find_fields(acc, query = %Statement.Query{body: %Statement.Values{}}) do
+    find_fields(acc, query.with)
+  end
+
+  def find_fields(acc, query = %Statement.Query{body: %Statement.SetOperation{}}) do
+    acc
+    |> find_fields(query.with)
+    |> find_fields(query.body.left)
+    |> find_fields(query.body.right)
+  end
+
+  def find_fields(acc, select = %Statement.Select{}) do
     %{op: op, table: table, schema: schema} = acc
     acc = acc
     |> find_table(select.from)
     |> Map.put(:op, :select)
     |> find_fields(select.from)
-    |> find_fields(query.with)
 
     select.projection
     |> Enum.reduce(acc, fn name, acc ->
@@ -165,10 +181,6 @@ defmodule JumpWire.Proxy.SQL.Parser do
     |> Map.put(:op, op)
     |> Map.put(:schema, schema)
     |> Map.put(:table, table)
-  end
-
-  def find_fields(acc, query = %Statement.Query{body: %Statement.Values{}}) do
-    find_fields(acc, query.with)
   end
 
   def find_fields(acc, %Statement.With{cte_tables: tables}) do
@@ -300,12 +312,28 @@ defmodule JumpWire.Proxy.SQL.Parser do
   def find_fields(acc, %Statement.TryCast{expr: expr}), do: find_fields(acc, expr)
   def find_fields(acc, %Statement.SafeCast{expr: expr}), do: find_fields(acc, expr)
 
+  def find_fields(acc, query = %Statement.InList{}) do
+    acc = find_fields(acc, query.expr)
+    Enum.reduce(query.list, acc, fn expr, acc -> find_fields(acc, expr) end)
+  end
+
+  def find_fields(acc, query = %Statement.InSubquery{}) do
+    acc
+    |> find_fields(query.expr)
+    |> find_fields(query.subquery)
+  end
+
+  def find_fields(acc, query = %Statement.InUnnest{}) do
+    acc
+    |> find_fields(query.expr)
+    |> find_fields(query.array_expr)
+  end
+
   def find_fields(acc, [expr]), do: find_fields(acc, expr)
 
+  def find_fields(acc, %Statement.Values{}), do: acc
   def find_fields(acc, []), do: acc
-
   def find_fields(acc, nil), do: acc
-
   def find_fields(acc, data) when is_binary(data), do: acc
 
   def find_fields(acc, statement) do
