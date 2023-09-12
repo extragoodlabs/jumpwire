@@ -398,6 +398,11 @@ defmodule JumpWire.Proxy.SQL.Parser do
     |> find_table(expr)
     |> put_table_alias(table_alias)
   end
+  def find_table(acc, %Statement.NestedJoin{table_with_joins: expr, alias: table_alias}) do
+    acc
+    |> find_table(expr)
+    |> put_table_alias(table_alias)
+  end
   def find_table(acc, %Ident{value: table}) do
     acc
     |> Map.update!(:tables, fn t -> [{nil, table} | t] end)

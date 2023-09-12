@@ -647,6 +647,16 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     ]
   end
 
+  test "parsing of nested joins table" do
+    query = "SELECT * FROM (a NATURAL JOIN b) c";
+    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, request} = Parser.to_request(statement)
+    assert request.select == [
+      %Field{table: "b", column: :wildcard},
+      %Field{table: "a", column: :wildcard},
+    ]
+  end
+
   defp assert_table_select(statement, name) do
     assert %Query{
       body: %Select{
