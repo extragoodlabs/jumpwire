@@ -380,28 +380,23 @@ defmodule JumpWire.Proxy.SQL.Parser do
     |> find_table(table)
   end
 
-  def find_table(acc, %Statement.Table{name: name, alias: alias}) do
+  def find_table(acc, %Statement.Table{name: name, alias: table_alias}) do
     {schema, table} =
       case name do
         [%Ident{value: table}] -> {system_schema(table), table}
         [%Ident{value: schema}, %Ident{value: table}] -> {schema, table}
       end
 
-    # check if the table name is aliased and save it if so
-    acc =
-      case alias do
-        %Statement.TableAlias{name: %Ident{value: alias_name}} ->
-          Map.update!(acc, :table_aliases, fn aliases ->
-            Map.put(aliases, alias_name, {schema, table})
-          end)
-
-        nil -> acc
-      end
-
     acc
     |> Map.update!(:tables, fn t -> [{schema, table} | t] end)
     |> Map.put(:schema, schema)
     |> Map.put(:table, table)
+    |> put_table_alias(table_alias)
+  end
+  def find_table(acc, %Statement.TableFunction{expr: expr, alias: table_alias}) do
+    acc
+    |> find_table(expr)
+    |> put_table_alias(table_alias)
   end
   def find_table(acc, %Ident{value: table}) do
     acc
@@ -415,4 +410,11 @@ defmodule JumpWire.Proxy.SQL.Parser do
     |> Map.put(:table, table)
   end
   def find_table(acc, _), do: %{acc | schema: nil, table: nil}
+
+  def put_table_alias(acc, nil), do: acc
+  def put_table_alias(acc, %Statement.TableAlias{name: %Ident{value: name}}) do
+    Map.update!(acc, :table_aliases, fn aliases ->
+      Map.put(aliases, name, {acc.schema, acc.table})
+    end)
+  end
 end
