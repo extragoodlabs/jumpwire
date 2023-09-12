@@ -20,18 +20,23 @@ defmodule JumpWire.Proxy.SQL.Statement do
   @type function_arg_expr() :: any()
 
   @type function_arg()
-  :: {:named, %{name: Ident.t, arg: function_arg_expr()}}
+  :: Named.t()
   | {:unnamed, function_arg_expr()}
 
-  @type object_name() :: [Ident.t]
+  typedstruct module: Named do
+    field :name, Statement.Ident.t()
+    field :arg, Statement.function_arg_expr()
+  end
+
+  @type object_name() :: [Ident.t()]
   @type non_block() :: :Nowait | :SkipLocked
   @type lock_type() :: :Share | :Update
 
   @type select_item()
   :: {:unnamed_expr, expr()}
-  | ExprWithAlias.t
-  | {:qualified_wildcard, object_name(), WildcardAdditionalOptions.t}
-  | {:wildcard, WildcardAdditionalOptions.t}
+  | ExprWithAlias.t()
+  | {:qualified_wildcard, object_name(), WildcardAdditionalOptions.t()}
+  | {:wildcard, WildcardAdditionalOptions.t()}
 
   typedstruct module: ExprWithAlias do
     field :expr, Statement.expr()
@@ -45,13 +50,13 @@ defmodule JumpWire.Proxy.SQL.Statement do
     field :limit, Statement.expr() | nil
     field :offset, Statement.Offset.t() | nil
     field :fetch, Statement.Fetch.t() | nil
-    field :locks, [Statement.LockClause.t]
+    field :locks, [Statement.LockClause.t()]
   end
 
   typedstruct module: Update do
-    field :table, Statement.TableWithJoins.t
-    field :assignments, [Statement.Assignment.t]
-    field :from, [Statement.TableWithJoins.t] | nil
+    field :table, Statement.TableWithJoins.t()
+    field :assignments, [Statement.Assignment.t()]
+    field :from, [Statement.TableWithJoins.t()] | nil
     field :selection, Statement.expr()
     field :returning, [Statement.select_item()] | nil
   end
@@ -67,8 +72,29 @@ defmodule JumpWire.Proxy.SQL.Statement do
   end
 
   typedstruct module: TableAlias do
-    field :name, Statement.Ident.t
-    field :columns, [Statement.Ident.t]
+    field :name, Statement.Ident.t()
+    field :columns, [Statement.Ident.t()]
+  end
+
+  typedstruct module: TypedString do
+    field :data_type, Statement.data_type()
+    field :value, String.t()
+  end
+
+  typedstruct module: MapAccess do
+    field :column, Statement.expr()
+    field :keys, [Statement.expr()]
+  end
+
+  typedstruct module: JsonAccess do
+    field :left, Statement.expr()
+    field :operator, Statement.json_operator()
+    field :right, Statement.expr()
+  end
+
+  typedstruct module: CompositeAcess do
+    field :expr, Statement.expr()
+    field :key, Statement.Ident.t()
   end
 
   typedstruct module: Function do
@@ -80,14 +106,19 @@ defmodule JumpWire.Proxy.SQL.Statement do
     field :order_by, [Statement.OrderByExpr.t()]
   end
 
+  typedstruct module: AggregateExpressionWithFilter do
+    field :expr, Statement.expr()
+    field :filter, Statement.expr()
+  end
+
   typedstruct module: NamedFunctionArg do
-    field :name, Statement.Ident.t
+    field :name, Statement.Ident.t()
     field :arg, Statement.function_arg_expr()
   end
 
   typedstruct module: Table do
-    field :name, [Statement.Ident.t]
-    field :alias, Statement.TableAlias.t
+    field :name, [Statement.Ident.t()]
+    field :alias, Statement.TableAlias.t()
     field :args, [Statement.function_arg()]
     field :with_hints, [Statement.expr()]
   end
@@ -131,7 +162,7 @@ defmodule JumpWire.Proxy.SQL.Statement do
 
   typedstruct module: With do
     field :recursive, boolean()
-    field :cte_tables, [Statement.Cte.t]
+    field :cte_tables, [Statement.Cte.t()]
   end
 
   typedstruct module: OrderByExpr do
@@ -173,13 +204,13 @@ defmodule JumpWire.Proxy.SQL.Statement do
   typedstruct module: LateralView do
     field :lateral_view, Statement.expr()
     field :lateral_view_name, Statement.object_name()
-    field :lateral_col_alias, [Statement.Ident.t]
+    field :lateral_col_alias, [Statement.Ident.t()]
     field :outer, boolean()
   end
 
   typedstruct module: DollarQuotedString do
-    field :value, String.t
-    field :tag, String.t
+    field :value, String.t()
+    field :tag, String.t()
   end
 
   typedstruct module: WindowSpec do
@@ -198,12 +229,12 @@ defmodule JumpWire.Proxy.SQL.Statement do
   end
 
   typedstruct module: Assignment do
-    field :id, [Statement.Ident.t]
+    field :id, [Statement.Ident.t()]
     field :value, Statement.expr()
   end
 
   typedstruct module: DoUpdate do
-    field :assignments, [Statement.Assignment.t]
+    field :assignments, [Statement.Assignment.t()]
     field :selection, Statement.expr()
   end
 
@@ -217,20 +248,20 @@ defmodule JumpWire.Proxy.SQL.Statement do
   ########################################
 
   @type set_expr()
-  :: Select.t
-  | Query.t
-  | SetOperation.t
-  | Values.t
-  | Insert.t
-  | Table.t
+  :: Select.t()
+  | Query.t()
+  | SetOperation.t()
+  | Values.t()
+  | Insert.t()
+  | Table.t()
 
   typedstruct module: Select do
     field :distinct, boolean()
-    field :top, Statement.Top.t
+    field :top, Statement.Top.t()
     field :projection, Statement.select_item()
-    field :into, Statement.SelectInto.t
-    field :from, [Statement.TableWithJoins.t]
-    field :lateral_views, [Statement.LateralView.t]
+    field :into, Statement.SelectInto.t()
+    field :from, [Statement.TableWithJoins.t()]
+    field :lateral_views, [Statement.LateralView.t()]
     field :selection, Statement.expr()
     field :group_by, [Statement.expr()]
     field :cluster_by, [Statement.expr()]
@@ -329,7 +360,7 @@ defmodule JumpWire.Proxy.SQL.Statement do
   | :pg_regex_i_match
   | :pg_regex_not_match
   | :pg_regex_not_i_match
-  | {:pg_custom_binary_operator, [String.t]}
+  | {:pg_custom_binary_operator, [String.t()]}
 
   @type unary_operator()
   :: :plus
@@ -352,11 +383,11 @@ defmodule JumpWire.Proxy.SQL.Statement do
   end
 
   @type data_type()
-  :: {:character, CharacterLength.t}
-  | {:char, CharacterLength.t}
-  | {:character_varying, CharacterLength.t}
-  | {:char_varying, CharacterLength.t}
-  | {:varchar, CharacterLength.t}
+  :: {:character, CharacterLength.t()}
+  | {:char, CharacterLength.t()}
+  | {:character_varying, CharacterLength.t()}
+  | {:char_varying, CharacterLength.t()}
+  | {:varchar, CharacterLength.t()}
   | {:nvarchar, integer()}
   | :uuid
   | {:character_large_object, integer()}
@@ -394,10 +425,10 @@ defmodule JumpWire.Proxy.SQL.Statement do
   | :text
   | :string
   | :bytea
-  | {:custom, object_name(), [String.t]}
+  | {:custom, object_name(), [String.t()]}
   | {:array, data_type()}
-  | {:enum, [String.t]}
-  | {:set, [String.t]}
+  | {:enum, [String.t()]}
+  | {:set, [String.t()]}
 
   @type date_time_field()
   :: :year
@@ -432,14 +463,19 @@ defmodule JumpWire.Proxy.SQL.Statement do
 
   @type trim_where_field() :: :both | :leading | :trailing
 
-  @type list_agg_on_overflow() :: :error | {:truncate, %{filler: expr(), with_count: boolean()}}
+  @type list_agg_on_overflow() :: :error | Truncate.t()
+
+  typedstruct module: Truncate do
+    field :filler, Statement.expr()
+    field :with_count, boolean()
+  end
 
   typedstruct module: ListAgg do
     field :distinct, boolean()
     field :expr, Statement.expr()
     field :separator, Statement.expr()
     field :on_overflow, Statement.list_agg_on_overflow()
-    field :within_group, [Statement.OrderByExpr.t]
+    field :within_group, [Statement.OrderByExpr.t()]
   end
 
   typedstruct module: ArrayAgg do
@@ -477,6 +513,70 @@ defmodule JumpWire.Proxy.SQL.Statement do
     field :expr, Statement.expr()
   end
 
+  typedstruct module: Cast do
+    field :expr, Statement.expr()
+    field :data_type, Statement.data_type()
+  end
+
+  typedstruct module: TryCast do
+    field :expr, Statement.expr()
+    field :data_type, Statement.data_type()
+  end
+
+  typedstruct module: SafeCast do
+    field :expr, Statement.expr()
+    field :data_type, Statement.data_type()
+  end
+
+  typedstruct module: AtTimeZone do
+    field :timestamp, Statement.expr()
+    field :time_zone, String.t()
+  end
+
+  typedstruct module: Extract do
+    field :expr, Statement.expr()
+    field :field, Statement.date_time_field()
+  end
+
+  typedstruct module: Ceil do
+    field :expr, Statement.expr()
+    field :field, Statement.date_time_field()
+  end
+
+  typedstruct module: Floor do
+    field :expr, Statement.expr()
+    field :field, Statement.date_time_field()
+  end
+
+  typedstruct module: Position do
+    field :expr, Statement.expr()
+    field :in, Statement.expr()
+  end
+
+  typedstruct module: Substring do
+    field :expr, Statement.expr()
+    field :substring_from, Statement.expr()
+    field :substring_for, Statement.expr()
+  end
+
+  typedstruct module: Trim do
+    field :expr, Statement.expr()
+    field :trim_where, Statement.trim_where_field()
+    field :trim_what, Statement.expr()
+  end
+
+  typedstruct module: Overlay do
+    field :expr, Statement.expr()
+    field :overlay_what, Statement.expr()
+    field :overlay_from, Statement.expr()
+    field :overlay_for, Statement.expr()
+  end
+
+  typedstruct module: Collate do
+    field :expr, Statement.expr()
+    field :collation, Statement.object_name()
+  end
+
   typedstruct module: Case do
     field :operand, Statement.expr() | nil
     field :conditions, [Statement.expr()]
@@ -495,6 +595,25 @@ defmodule JumpWire.Proxy.SQL.Statement do
     field :negated, boolean()
   end
 
+  typedstruct module: InSubquery do
+    field :expr, Statement.expr()
+    field :subquery, Statement.Query.t()
+    field :negated, boolean()
+  end
+
+  typedstruct module: InUnnest do
+    field :expr, Statement.expr()
+    field :array_expr, Statement.expr()
+    field :negated, boolean()
+  end
+
+  typedstruct module: Between do
+    field :expr, Statement.expr()
+    field :negated, boolean()
+    field :low, Statement.expr()
+    field :high, Statement.expr()
+  end
+
   typedstruct module: Like do
     field :negated, boolean()
     field :expr, Statement.expr()
@@ -509,6 +628,13 @@ defmodule JumpWire.Proxy.SQL.Statement do
     field :escape_char, String.t() | nil
   end
 
+  typedstruct module: SimilarTo do
+    field :negated, boolean()
+    field :expr, Statement.expr()
+    field :pattern, Statement.expr()
+    field :escape_char, String.t()
+  end
+
   typedstruct module: SetVariable do
     field :local, boolean()
     field :hivevar, boolean()
@@ -521,11 +647,25 @@ defmodule JumpWire.Proxy.SQL.Statement do
     field :value, Statement.expr()
   end
 
+  typedstruct module: Interval do
+    field :value, Statement.expr()
+    field :leading_field, Statement.date_time_field()
+    field :leading_precision, Statement.integer()
+    field :last_field, Statement.date_time_field()
+    field :fractional_seconds_precision, Statement.integer()
+  end
+
+  typedstruct module: MatchAgainst do
+    field :columns, [Statement.Ident.t()]
+    field :match_value, Statement.value()
+    field :opt_search_modifier, Statement.search_modifier()
+  end
+
   @type expr()
   :: Ident.t
   | {:compound_identifier, [Ident.t]}
-  | {:json_access, %{left: expr(), operator: json_operator(), right: expr()}}
-  | {:composite_access, %{expr: expr(), key: Ident.t}}
+  | JsonAccess.t()
+  | CompositeAccess.t()
   | {:is_false, expr()}
   | {:is_not_false, expr()}
   | {:is_true, expr()}
@@ -537,38 +677,38 @@ defmodule JumpWire.Proxy.SQL.Statement do
   | {:is_distinct_from, expr(), expr()}
   | {:is_not_distinct_from, expr(), expr()}
   | InList.t()
-  | {:in_subquery, %{expr: expr(), subquery: Query.t, negated: boolean()}}
-  | {:in_unnest, %{expr: expr(), array_expr: expr(), negated: boolean}}
-  | {:between, %{expr: expr(), negated: boolean(), low: expr(), high: expr()}}
+  | InSubquery.t()
+  | InUnnest.t()
+  | Between.t()
   | BinaryOp.t()
   | Like.t()
   | ILike.t()
-  | {:similar_to, %{negated: boolean(), expr: expr(), pattern: expr(), escape_char: String.t}}
+  | SimilarTo.t()
   | {:any_op, expr()}
   | {:all_op, expr()}
   | UnaryOp.t()
-  | {:cast, %{expr: expr(), data_type: data_type()}}
-  | {:try_cast, %{expr: expr(), data_type: data_type()}}
-  | {:safe_cast, %{expr: expr(), data_type: data_type()}}
-  | {:at_time_zone, %{timestamp: expr(), time_zone: String.t}}
-  | {:extract, %{field: date_time_field(), expr: expr()}}
-  | {:ceil, %{expr: expr(), field: date_time_field()}}
-  | {:floor, %{expr: expr(), field: date_time_field()}}
-  | {:position, %{expr: expr(), in: expr()}}
-  | {:substring, %{expr: expr(), substring_from: expr(), substring_for: expr()}}
-  | {:trim, %{expr: expr(), trim_where: trim_where_field(), trim_what: expr()}}
-  | {:overlay, %{expr: expr(), overlay_what: expr(), overlay_from: expr(), overlay_for: expr()}}
-  | {:collate, %{expr: expr(), collation: object_name()}}
+  | Cast.t()
+  | TryCast.t()
+  | SafeCast.t()
+  | AtTimeZone.t()
+  | Extract.t()
+  | Ceil.t()
+  | Floor.t()
+  | Position.t()
+  | Substring.t()
+  | Trim.t()
+  | Overlay.t()
+  | Collate.t()
   | {:nested, expr()}
   | value()
-  | {:typed_string, %{data_type: data_type(), value: String.t()}}
-  | {:map_access, %{column: expr(), keys: [expr()]}}
+  | TypedString.t()
+  | MapAccess.t()
   | Function.t()
-  | {:aggregate_expression_with_filter, %{expr: expr(), filter: expr()}}
+  | AggregateExpressionWithFilter.t()
   | Case.t()
   | Exists.t()
-  | {:subquery, Query.t}
-  | {:array_subquery, Query.t}
+  | {:subquery, Query.t()}
+  | {:array_subquery, Query.t()}
   | ListAgg.t()
   | ArrayAgg.t()
   | {:grouping_sets, [[expr()]]}
@@ -577,13 +717,7 @@ defmodule JumpWire.Proxy.SQL.Statement do
   | {:tuple, [expr()]}
   | ArrayIndex.t()
   | Array.t()
-  | {:interval, %{
-        value: expr(),
-        leading_field: date_time_field(),
-        leading_precision: integer(),
-        last_field: date_time_field(),
-        fractional_seconds_precision: integer()
-     }}
-  | {:match_against, %{columns: [Ident.t], match_value: value(), opt_search_modifier: search_modifier()}}
+  | Interval.t()
+  | MatchAgainst.t()
   | nil
 end
