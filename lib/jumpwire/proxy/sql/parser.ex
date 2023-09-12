@@ -403,6 +403,15 @@ defmodule JumpWire.Proxy.SQL.Parser do
     |> find_table(expr)
     |> put_table_alias(table_alias)
   end
+  def find_table(acc, %Statement.Derived{subquery: expr, alias: table_alias}) do
+    acc
+    |> find_table(expr)
+    |> find_fields(expr)
+    |> Map.update!(:tables, fn t -> [{nil, :derived} | t] end)
+    |> Map.put(:schema, nil)
+    |> Map.put(:table, :derived)
+    |> put_table_alias(table_alias)
+  end
   def find_table(acc, %Ident{value: table}) do
     acc
     |> Map.update!(:tables, fn t -> [{nil, table} | t] end)

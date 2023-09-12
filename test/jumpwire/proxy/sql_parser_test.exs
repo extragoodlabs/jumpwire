@@ -638,6 +638,20 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     ]
   end
 
+  test "parsing of derived table name" do
+    query = "SELECT * FROM (SELECT name FROM users) AS t;"
+    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, request} = Parser.to_request(statement)
+    assert request.select == [
+      # TODO: users shouldn't show up as a wildcard,
+      # there is enough information to determine that the wildcard only
+      # applies to the derived table
+      %Field{table: "users", column: :wildcard},
+      %Field{table: :derived, column: :wildcard},
+      %Field{table: "users", column: "name"},
+    ]
+  end
+
   test "parsing of table function" do
     query = "SELECT bar.bam FROM TABLE(foo) as bar"
     assert {:ok, [statement]} = Parser.parse_postgresql(query)
