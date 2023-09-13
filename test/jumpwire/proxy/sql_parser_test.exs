@@ -792,6 +792,16 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     ]
   end
 
+  test "parsing composite access" do
+    query = "SELECT (item).name FROM on_hand WHERE (item).price > 9.99;"
+    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, request} = Parser.to_request(statement)
+    assert request.select == [
+      %Field{table: "on_hand", column: "item"},
+      %Field{table: "on_hand", column: "item"},
+    ]
+  end
+
   defp assert_table_select(statement, name) do
     assert %Query{
       body: %Select{

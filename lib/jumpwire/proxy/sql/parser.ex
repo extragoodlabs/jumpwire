@@ -404,6 +404,8 @@ defmodule JumpWire.Proxy.SQL.Parser do
     |> find_fields(expr.expr)
   end
 
+  def find_fields(acc, %Statement.CompositeAccess{expr: expr}), do: find_fields(acc, expr)
+
   def find_fields(acc, [expr]), do: find_fields(acc, expr)
 
   def find_fields(acc, %Statement.Values{}), do: acc

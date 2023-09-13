@@ -89,7 +89,7 @@ defmodule JumpWire.Proxy.SQL.Statement do
     field :right, Statement.expr()
   end
 
-  typedstruct module: CompositeAcess do
+  typedstruct module: CompositeAccess do
     field :expr, Statement.expr()
     field :key, Statement.Ident.t()
   end
