@@ -1,7 +1,7 @@
-use rustler::{Atom, Binary, Env, Term};
+use rustler::{Atom, Binary, Env, NifUnitEnum, Term};
 use serde_rustler::prefixed_to_term;
 use sqlparser::ast::Statement;
-use sqlparser::dialect::PostgreSqlDialect;
+use sqlparser::dialect::{GenericDialect, MySqlDialect, PostgreSqlDialect};
 use sqlparser::parser::{Parser, ParserError};
 
 mod atoms {
@@ -12,6 +12,26 @@ mod atoms {
         parser_error,
         recursion_limit_exceeded,
     }
+}
+
+#[derive(NifUnitEnum)]
+enum Dialect {
+    Postgresql,
+    Mysql,
+    Generic,
+}
+
+#[rustler::nif]
+fn debug_parse(query: Binary, dialect: Dialect) -> String {
+    let dialect: Box<dyn sqlparser::dialect::Dialect> = match dialect {
+        Dialect::Postgresql => Box::new(PostgreSqlDialect {}),
+        Dialect::Mysql => Box::new(MySqlDialect {}),
+        Dialect::Generic => Box::new(GenericDialect {}),
+    };
+
+    let sql = std::str::from_utf8(query.as_slice()).unwrap();
+    let parsed = Parser::parse_sql(&*dialect, sql).unwrap();
+    format!("{parsed:?}")
 }
 
 #[rustler::nif]
@@ -45,4 +65,7 @@ fn parse(sql: &str) -> Result<Vec<Statement>, ParserError> {
     Parser::parse_sql(&dialect, sql)
 }
 
-rustler::init!("Elixir.JumpWire.Proxy.SQL.Parser", [parse_postgresql]);
+rustler::init!(
+    "Elixir.JumpWire.Proxy.SQL.Parser",
+    [parse_postgresql, debug_parse]
+);
