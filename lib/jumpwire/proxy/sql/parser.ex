@@ -198,6 +198,17 @@ defmodule JumpWire.Proxy.SQL.Parser do
     |> Map.put(:op, op)
   end
 
+  def find_fields(acc, expr = %Statement.MapAccess{}) do
+    acc = find_fields(acc, expr.column)
+    Enum.reduce(expr.keys, acc, fn key, acc -> find_fields(acc, key) end)
+  end
+
+  def find_fields(acc, %Statement.JsonAccess{left: left, right: right}) do
+    acc
+    |> find_fields(left)
+    |> find_fields(right)
+  end
+
   def find_fields(acc, %Statement.UnaryOp{expr: expr}) do
     find_fields(acc, expr)
   end
