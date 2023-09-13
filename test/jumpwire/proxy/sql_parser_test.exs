@@ -782,6 +782,16 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     ]
   end
 
+  test "parsing SIMILAR TO statement" do
+    query = "SELECT a SIMILAR TO '%' + b + '%' FROM test;"
+    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, request} = Parser.to_request(statement)
+    assert request.select == [
+      %Field{table: "test", column: "a"},
+      %Field{table: "test", column: "b"},
+    ]
+  end
+
   defp assert_table_select(statement, name) do
     assert %Query{
       body: %Select{

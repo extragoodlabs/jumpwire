@@ -398,6 +398,12 @@ defmodule JumpWire.Proxy.SQL.Parser do
     Map.put(acc, :op, op)
   end
 
+  def find_fields(acc, expr = %Statement.SimilarTo{}) do
+    acc
+    |> find_fields(expr.pattern)
+    |> find_fields(expr.expr)
+  end
+
   def find_fields(acc, [expr]), do: find_fields(acc, expr)
 
   def find_fields(acc, %Statement.Values{}), do: acc
