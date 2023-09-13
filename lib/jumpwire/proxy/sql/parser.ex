@@ -404,6 +404,11 @@ defmodule JumpWire.Proxy.SQL.Parser do
     |> find_table(expr)
     |> put_table_alias(table_alias)
   end
+  def find_table(acc, expr = %Statement.UNNEST{}) do
+    acc
+    |> find_fields(expr.array_exprs)
+    |> put_table_alias(expr.alias)
+  end
   def find_table(acc, %Statement.Derived{subquery: expr, alias: table_alias}) do
     acc
     |> find_table(expr)

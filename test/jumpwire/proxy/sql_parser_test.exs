@@ -638,6 +638,21 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     ]
   end
 
+  @tag :skip
+  # skipping until https://github.com/sqlparser-rs/sqlparser-rs/pull/968
+  test "parsing unnest" do
+    query = """
+    SELECT (SELECT * FROM unnest(stxkeys)) AS columns
+    FROM pg_catalog.pg_statistic_ext;
+    """
+    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, request} = Parser.to_request(statement)
+    assert request.select == [
+      %Field{schema: "pg_catalog", table: "pg_statistic_ext", column: :wildcard},
+      %Field{schema: "pg_catalog", table: "pg_statistic_ext", column: "stxkeys"},
+    ]
+  end
+
   test "parsing of derived table name" do
     query = "SELECT * FROM (SELECT name FROM users) AS t;"
     assert {:ok, [statement]} = Parser.parse_postgresql(query)
