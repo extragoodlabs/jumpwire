@@ -290,6 +290,7 @@ with {:ok, path} <- System.fetch_env("JUMPWIRE_SSO_METADATA_PATH"),
   sp_id = System.get_env("JUMPWIRE_SSO_SPID", "jumpwire")
   signed_envelopes = get_boolean_env("JUMPWIRE_SSO_SIGNED_ENVELOPES", true)
   generated_name = System.get_env("JUMPWIRE_SSO_GENERATED_CERTNAME", "localhost")
+  sso_base_url = System.get_env("JUMPWIRE_SSO_BASE_URL", "/sso")
 
   config :jumpwire, :sso,
     group_attribute: System.get_env("JUMPWIRE_SSO_GROUPS_ATTRIBUTE", "Group")
@@ -313,7 +314,7 @@ with {:ok, path} <- System.fetch_env("JUMPWIRE_SSO_METADATA_PATH"),
       %{
         id: idp_id,
         sp_id: sp_id,
-        base_url: "/sso",
+        base_url: sso_base_url,
         metadata_file: path,
         sign_requests: true,
         sign_metadata: true,
