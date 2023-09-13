@@ -116,6 +116,7 @@ defmodule JumpWire.Proxy.SQL.Parser do
     |> find_fields(statement.source)
     |> Map.put(:op, :select)
     |> find_fields(statement.returning)
+    |> find_fields(statement.on)
     |> Map.put(:op, :insert)
 
     # parse inserts without explicit columns
@@ -372,6 +373,29 @@ defmodule JumpWire.Proxy.SQL.Parser do
 
   def find_fields(acc, %Statement.Array{elem: elem}) do
     Enum.reduce(elem, acc, fn expr, acc -> find_fields(acc, expr) end)
+  end
+
+  def find_fields(acc, query = %Statement.OnConflict{}) do
+    Enum.reduce(query.conflict_target, acc, fn expr, acc -> find_fields(acc, expr) end)
+    |> find_fields(query.action)
+  end
+  def find_fields(acc, :do_nothing), do: acc
+  def find_fields(acc, "do_nothing"), do: acc
+  def find_fields(acc, query = %Statement.DoUpdate{}) do
+    op = acc.op
+
+    acc = Map.put(acc, :op, :update)
+    acc = Enum.reduce(query.assignments, acc, fn expr, acc -> find_fields(acc, expr) end)
+
+    acc =
+      case query.selection do
+        nil -> acc
+        selection ->
+          acc = Map.put(acc, :op, :select)
+          Enum.reduce(selection, acc, fn expr, acc -> find_fields(acc, expr) end)
+      end
+
+    Map.put(acc, :op, op)
   end
 
   def find_fields(acc, [expr]), do: find_fields(acc, expr)

@@ -752,6 +752,36 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     ]
   end
 
+  test "parsing ON CONFLICT statement" do
+    query = """
+    INSERT INTO transactions(name, amount)
+    VALUES ('bob', '1234'), ('alice', '4321')
+    ON CONFLICT (name) DO NOTHING;
+    """
+    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, request} = Parser.to_request(statement)
+    assert request.select == [
+      %Field{table: "transactions", column: "name"},
+    ]
+
+    query = """
+    INSERT INTO customers (name, email)
+    VALUES('Microsoft','hotline@microsoft.com')
+    ON CONFLICT (name)
+    DO UPDATE SET email = EXCLUDED.email || ';' || customers.email;
+    """
+    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, request} = Parser.to_request(statement)
+    assert request.select == [
+      %Field{table: "customers", column: "email"},
+      %Field{table: "EXCLUDED", column: "email"},
+      %Field{table: "customers", column: "name"},
+    ]
+    assert request.update == [
+      %Field{table: "customers", column: "email"},
+    ]
+  end
+
   defp assert_table_select(statement, name) do
     assert %Query{
       body: %Select{

@@ -268,12 +268,12 @@ defmodule JumpWire.Proxy.SQL.Statement do
 
   typedstruct module: DoUpdate do
     field :assignments, [Statement.Assignment.t()]
-    field :selection, Statement.expr()
+    field :selection, Statement.expr() | nil
   end
 
   typedstruct module: OnConflict do
-    field :conflict_target, {:columns, [Statement.Ident.t()]} | {:on_constraint, Statement.object_name()}
-    field :action, :do_nothing | {:do_update, Statement.DoUpdate.t()}
+    field :conflict_target, [Statement.Ident.t()] | Statement.object_name()
+    field :action, :do_nothing | Statement.DoUpdate.t()
   end
 
   ########################################
