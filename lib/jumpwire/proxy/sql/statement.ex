@@ -615,7 +615,7 @@ defmodule JumpWire.Proxy.SQL.Statement do
     field :expr, Statement.expr()
     field :overlay_what, Statement.expr()
     field :overlay_from, Statement.expr()
-    field :overlay_for, Statement.expr()
+    field :overlay_for, Statement.expr() | nil
   end
 
   typedstruct module: Collate do
