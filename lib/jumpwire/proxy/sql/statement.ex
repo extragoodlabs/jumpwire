@@ -603,8 +603,9 @@ defmodule JumpWire.Proxy.SQL.Statement do
 
   typedstruct module: Substring do
     field :expr, Statement.expr()
-    field :substring_from, Statement.expr()
-    field :substring_for, Statement.expr()
+    field :special, boolean()
+    field :substring_from, Statement.expr() | nil
+    field :substring_for, Statement.expr() | nil
   end
 
   typedstruct module: Trim do
