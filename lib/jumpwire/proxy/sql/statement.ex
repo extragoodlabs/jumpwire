@@ -701,10 +701,12 @@ defmodule JumpWire.Proxy.SQL.Statement do
     field :fractional_seconds_precision, Statement.integer() | nil
   end
 
+  # MySQL specific search
+  # https://dev.mysql.com/doc/refman/8.0/en/fulltext-search.html#function_match
   typedstruct module: MatchAgainst do
     field :columns, [Statement.Ident.t()]
     field :match_value, Statement.value()
-    field :opt_search_modifier, Statement.search_modifier()
+    field :opt_search_modifier, Statement.search_modifier() | nil
   end
 
   @type expr()
