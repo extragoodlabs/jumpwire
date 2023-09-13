@@ -17,11 +17,8 @@ defmodule JumpWire.Proxy.SQL.Statement do
   @typedoc """
   https://docs.rs/sqlparser/latest/sqlparser/ast/enum.FunctionArgExpr.html
   """
-  @type function_arg_expr() :: any()
-
-  @type function_arg()
-  :: Named.t()
-  | {:unnamed, function_arg_expr()}
+  @type function_arg_expr() :: expr() | object_name() | :wildcard
+  @type function_arg() :: Named.t() | function_arg_expr()
 
   typedstruct module: Named do
     field :name, Statement.Ident.t()

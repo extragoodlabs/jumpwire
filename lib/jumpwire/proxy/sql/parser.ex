@@ -355,6 +355,10 @@ defmodule JumpWire.Proxy.SQL.Parser do
     |> find_fields(query.right)
   end
 
+  def find_fields(acc, :wildcard) do
+    Traveler.put_field(acc, %Field{column: :wildcard})
+  end
+
   def find_fields(acc, [expr]), do: find_fields(acc, expr)
 
   def find_fields(acc, %Statement.Values{}), do: acc
