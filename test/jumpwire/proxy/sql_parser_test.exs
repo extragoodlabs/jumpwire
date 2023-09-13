@@ -724,6 +724,16 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     ]
   end
 
+  test "parsing arrays" do
+    query = "SELECT ARRAY[a, b] FROM test;"
+    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, request} = Parser.to_request(statement)
+    assert request.select == [
+      %Field{table: "test", column: "b"},
+      %Field{table: "test", column: "a"},
+    ]
+  end
+
   defp assert_table_select(statement, name) do
     assert %Query{
       body: %Select{

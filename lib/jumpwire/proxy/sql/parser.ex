@@ -359,6 +359,10 @@ defmodule JumpWire.Proxy.SQL.Parser do
     Traveler.put_field(acc, %Field{column: :wildcard})
   end
 
+  def find_fields(acc, %Statement.Array{elem: elem}) do
+    Enum.reduce(elem, acc, fn expr, acc -> find_fields(acc, expr) end)
+  end
+
   def find_fields(acc, [expr]), do: find_fields(acc, expr)
 
   def find_fields(acc, %Statement.Values{}), do: acc
