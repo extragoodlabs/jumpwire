@@ -686,6 +686,20 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     ]
   end
 
+  test "parsing of ANY" do
+    query = """
+    SELECT pg_catalog.array_to_string(array(select rolname from pg_catalog.pg_roles where oid = any (pol.polroles)),',')
+    FROM pg_catalog.pg_policy pol;
+    """
+    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, request} = Parser.to_request(statement)
+    assert request.select == [
+      %Field{schema: "pg_catalog", table: "pg_policy", column: "polroles"},
+      %Field{schema: "pg_catalog", table: "pg_roles", column: "oid"},
+      %Field{schema: "pg_catalog", table: "pg_roles", column: "rolname"},
+    ]
+  end
+
   defp assert_table_select(statement, name) do
     assert %Query{
       body: %Select{

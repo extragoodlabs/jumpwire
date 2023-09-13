@@ -348,6 +348,18 @@ defmodule JumpWire.Proxy.SQL.Parser do
     |> find_fields(query.substring_from)
   end
 
+  def find_fields(acc, query = %Statement.AnyOp{}) do
+    acc
+    |> find_fields(query.left)
+    |> find_fields(query.right)
+  end
+
+  def find_fields(acc, query = %Statement.AllOp{}) do
+    acc
+    |> find_fields(query.left)
+    |> find_fields(query.right)
+  end
+
   def find_fields(acc, [expr]), do: find_fields(acc, expr)
 
   def find_fields(acc, %Statement.Values{}), do: acc

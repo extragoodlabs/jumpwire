@@ -544,6 +544,18 @@ defmodule JumpWire.Proxy.SQL.Statement do
     field :right, Statement.expr()
   end
 
+  typedstruct module: AnyOp do
+    field :left, Statement.expr()
+    field :compare_op, Statement.binary_operator()
+    field :right, Statement.expr()
+  end
+
+  typedstruct module: AllOp do
+    field :left, Statement.expr()
+    field :compare_op, Statement.binary_operator()
+    field :right, Statement.expr()
+  end
+
   typedstruct module: UnaryOp do
     field :op, Statement.unary_operator()
     field :expr, Statement.expr()
@@ -720,8 +732,8 @@ defmodule JumpWire.Proxy.SQL.Statement do
   | Like.t()
   | ILike.t()
   | SimilarTo.t()
-  | {:any_op, expr()}
-  | {:all_op, expr()}
+  | AnyOp.t()
+  | AllOp.t()
   | UnaryOp.t()
   | Cast.t()
   | TryCast.t()
