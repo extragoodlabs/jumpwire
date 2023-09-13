@@ -150,21 +150,16 @@ defmodule JumpWire.Proxy.SQL.Parser do
 
   def to_request(_), do: {:error, :invalid}
 
-  def find_fields(acc, query = %Statement.Query{body: select = %Statement.Select{}}) do
+  def find_fields(acc, query = %Statement.Query{}) do
     acc
     |> find_fields(query.with)
-    |> find_fields(select)
+    |> find_fields(query.body)
   end
 
-  def find_fields(acc, query = %Statement.Query{body: %Statement.Values{}}) do
-    find_fields(acc, query.with)
-  end
-
-  def find_fields(acc, query = %Statement.Query{body: %Statement.SetOperation{}}) do
+  def find_fields(acc, query = %Statement.SetOperation{}) do
     acc
-    |> find_fields(query.with)
-    |> find_fields(query.body.left)
-    |> find_fields(query.body.right)
+    |> find_fields(query.left)
+    |> find_fields(query.right)
   end
 
   def find_fields(acc, select = %Statement.Select{}) do

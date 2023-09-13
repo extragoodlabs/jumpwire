@@ -700,6 +700,21 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     ]
   end
 
+  test "parsing of multiple union selects" do
+    query = """
+    SELECT *
+    UNION SELECT * FROM pg_namespace
+    UNION SELECT * FROM pg_class;
+    """
+    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, request} = Parser.to_request(statement)
+    assert request.select == [
+      %Field{schema: "pg_catalog", table: "pg_namespace", column: :wildcard},
+      %Field{schema: "pg_catalog", table: "pg_class", column: :wildcard},
+      %Field{schema: "pg_catalog", table: "pg_namespace", column: :wildcard},
+    ]
+  end
+
   defp assert_table_select(statement, name) do
     assert %Query{
       body: %Select{
