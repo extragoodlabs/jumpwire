@@ -93,7 +93,7 @@ defmodule JumpWire.ConfigLoader do
   end
 
   def from_map(contents, org_id) do
-    Logger.debug("Configuration: #{inspect contents}")
+    Logger.debug("Configuration: #{inspect redact(contents)}")
 
     {opts, contents} = Map.pop(contents, "global", %{})
     opts = convert_options(opts)
@@ -126,4 +126,14 @@ defmodule JumpWire.ConfigLoader do
 
     Keyword.merge(@default_opts, opts)
   end
+
+  defp redact(data) when is_map(data) do
+    data
+    |> Stream.map(&redact/1)
+    |> Map.new()
+  end
+  defp redact(data) when is_list(data), do: Enum.map(data, &redact/1)
+  defp redact({k, _}) when k in ["password", "username"], do: {k, "********"}
+  defp redact({k, v}) when is_map(v) or is_list(v), do: {k, redact(v)}
+  defp redact(val), do: val
 end
