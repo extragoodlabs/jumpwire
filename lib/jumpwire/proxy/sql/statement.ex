@@ -118,10 +118,13 @@ defmodule JumpWire.Proxy.SQL.Statement do
 
   typedstruct module: Table do
     field :name, [Statement.Ident.t()]
-    field :alias, Statement.TableAlias.t()
-    field :args, [Statement.function_arg()]
+    field :alias, Statement.TableAlias.t() | nil
+    field :args, [Statement.function_arg()] | nil
     field :with_hints, [Statement.expr()]
+    field :version, Statement.table_version() | nil
   end
+
+  @type table_version() :: {:for_system_time_as_of, expr()}
 
   typedstruct module: Derived do
     field :lateral, boolean()
