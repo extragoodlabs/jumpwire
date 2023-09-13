@@ -412,6 +412,12 @@ defmodule JumpWire.Proxy.SQL.Parser do
     |> find_fields(query.overlay_for)
   end
 
+  def find_fields(acc, query = %Statement.AggregateExpressionWithFilter{}) do
+    acc
+    |> find_fields(query.expr)
+    |> find_fields(query.filter)
+  end
+
   def find_fields(acc, %Statement.MatchAgainst{columns: cols}), do: find_fields(acc, cols)
   def find_fields(acc, %Statement.CompositeAccess{expr: expr}), do: find_fields(acc, expr)
 

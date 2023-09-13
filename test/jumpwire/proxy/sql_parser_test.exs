@@ -812,6 +812,16 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     ]
   end
 
+  test "parsing of aggregates with filter" do
+    query = "SELECT AVG(mark) FILTER (WHERE mark > 0) FROM scores;"
+    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, request} = Parser.to_request(statement)
+    assert request.select == [
+      %Field{table: "scores", column: "mark"},
+      %Field{table: "scores", column: "mark"},
+    ]
+  end
+
   defp assert_table_select(statement, name) do
     assert %Query{
       body: %Select{
