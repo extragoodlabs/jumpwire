@@ -695,10 +695,10 @@ defmodule JumpWire.Proxy.SQL.Statement do
 
   typedstruct module: Interval do
     field :value, Statement.expr()
-    field :leading_field, Statement.date_time_field()
-    field :leading_precision, Statement.integer()
-    field :last_field, Statement.date_time_field()
-    field :fractional_seconds_precision, Statement.integer()
+    field :leading_field, Statement.date_time_field() | nil
+    field :leading_precision, Statement.integer() | nil
+    field :last_field, Statement.date_time_field() | nil
+    field :fractional_seconds_precision, Statement.integer() | nil
   end
 
   typedstruct module: MatchAgainst do

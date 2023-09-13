@@ -407,6 +407,7 @@ defmodule JumpWire.Proxy.SQL.Parser do
   def find_fields(acc, [expr]), do: find_fields(acc, expr)
 
   def find_fields(acc, %Statement.Values{}), do: acc
+  def find_fields(acc, %Statement.Interval{}), do: acc
   def find_fields(acc, []), do: acc
   def find_fields(acc, nil), do: acc
   def find_fields(acc, data) when is_binary(data), do: acc
