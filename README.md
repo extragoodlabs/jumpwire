@@ -261,6 +261,7 @@ The available configuration options are detailed in [our documentation](https://
 | JUMPWIRE_SSO_SIGNED_ENVELOPES | true | Whether to expect the SSO IdP to sign its SAML envelopes. |
 | JUMPWIRE_SSO_GENERATED_CERTNAME | localhost | Name of ACME generated TLS certificate to use with SSO requests. Not used if a TLS cert and key are explicitly configured. |
 | JUMPWIRE_SSO_GROUPS_ATTRIBUTE | Group | Attribute on SAML assertions listing the groups a user is a member of. |
+| JUMPWIRE_SSO_BASE_URL | - | Explicitly set the base URL for SSO requests, including scheme and hostname. This is useful when running the gateway behind a load balancer that terminates TLS, to override the scheme of the host. |
 | JUMPWIRE_DISABLE_REPORTING | false | Disable reporting of anonymous usage analytics. |
 
 ### Encryption keys
