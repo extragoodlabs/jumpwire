@@ -13,10 +13,15 @@ defmodule JumpWire.Router.Supervisor do
   def init(args) do
     opts = Application.get_env(:jumpwire, JumpWire.Router) |> Keyword.merge(args)
 
-    # Specify a dynamic SNI function for HTTPS. This is used to support
-    # certificates generated or loaded at runtime from ACME.
     https_opts = opts[:https]
-    |> Keyword.put(:sni_fun, &JumpWire.TLS.sni_fun/1)
+    https_opts =
+      if opts[:use_sni] do
+        # Specify a dynamic SNI function for HTTPS. This is used to support
+        # certificates generated or loaded at runtime from ACME.
+        Keyword.put(https_opts, :sni_fun, &JumpWire.TLS.sni_fun/1)
+      else
+        https_opts
+      end
 
     children = [
       Samly.Provider,

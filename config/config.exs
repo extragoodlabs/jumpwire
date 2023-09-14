@@ -25,6 +25,7 @@ config :tesla, :adapter, Tesla.Adapter.Mint
 config :libcluster, :topologies, []
 
 config :jumpwire, JumpWire.Router,
+  use_sni: true,
   https: [port: 4443],
   http: [port: 4004]
 

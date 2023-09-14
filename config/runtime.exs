@@ -21,7 +21,9 @@ end
 with {:ok, cert} <- System.fetch_env("JUMPWIRE_TLS_CERT"),
      {:ok, key} <- System.fetch_env("JUMPWIRE_TLS_KEY") do
   ssl_opts = [certfile: cert, keyfile: key]
-  config :jumpwire, JumpWire.Router, https: ssl_opts
+  config :jumpwire, JumpWire.Router,
+    use_sni: false,
+    https: ssl_opts
   config :jumpwire, :proxy,
     use_sni: false,
     server_ssl: ssl_opts
