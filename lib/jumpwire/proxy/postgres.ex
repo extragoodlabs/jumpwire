@@ -760,7 +760,7 @@ defmodule JumpWire.Proxy.Postgres do
       {:ok, fields} ->
         case Enum.find(fields, fn %{column: name} -> name == col end) do
           nil ->
-            Logger.warn("Could not find colummn #{col} in postgres schema for table #{namespace}.#{table}")
+            Logger.debug("Could not find colummn #{col} in postgres schema for table #{namespace}.#{table}")
             []
 
           field -> [field]
