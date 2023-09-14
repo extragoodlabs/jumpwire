@@ -10,7 +10,7 @@ defmodule JumpWire.Manifest do
     field :name, :string
     field :root_type, Ecto.Enum, values: [:jumpwire | @proxy_types]
     field :configuration, :map
-    field :credentials, :map, default: nil, null: true
+    field :credentials, :map, default: nil, null: true, redact: true
     field :classification, :string
     field :organization_id, :string
   end
