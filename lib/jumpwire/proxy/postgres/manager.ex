@@ -138,7 +138,7 @@ defmodule JumpWire.Proxy.Postgres.Manager do
     FROM information_schema.columns
     INNER JOIN pg_class ON relname = table_name
     INNER JOIN pg_namespace ON pg_namespace.oid = pg_class.relnamespace
-    WHERE pg_class.relkind = 'r' AND pg_namespace.nspname IN (#{placeholders});
+    WHERE (pg_class.relkind = 'r' OR pg_class.relkind = 'v') AND pg_namespace.nspname IN (#{placeholders});
     """
 
     case Postgrex.query(conn, query, namespaces) do
