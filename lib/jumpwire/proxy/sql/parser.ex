@@ -20,8 +20,6 @@ defmodule JumpWire.Proxy.SQL.Parser do
     typedstruct do
       field :request, Request.t(), default: %Request{}
       field :op, :select | :update | :delete | :insert, enforce: true
-      field :schema, String.t()
-      field :table, String.t()
       field :tables, [String.t()], default: []
       field :table_aliases, map(), default: %{}
     end
@@ -31,31 +29,39 @@ defmodule JumpWire.Proxy.SQL.Parser do
     end
     def get_table_alias(_acc, _field), do: nil
 
-    def put_field(acc, field = %Field{column: :wildcard, table: nil}) do
-      # map wildcards to every table. this is necessary for getting all
-      # fields in a join
+    def put_field(acc, field = %Field{table: nil}) do
+      # map unqualified fields to every table.
+      # this is necessary for getting all fields in a join
       Enum.reduce(acc.tables, acc, fn {schema, table}, acc ->
         schema = schema || JumpWire.Proxy.SQL.Parser.system_schema(table)
         field = %{field | schema: schema, table: table}
-        Map.update!(acc, :request, fn req ->
-          Request.put_field(req, acc.op, field)
-        end)
+        put_field(acc, field)
       end)
     end
 
     def put_field(acc, field) do
-      {schema, table} =
-        with nil <- get_table_alias(acc, field) do
-          table = field.table || acc.table
-          schema = field.schema || acc.schema || JumpWire.Proxy.SQL.Parser.system_schema(table)
-          {schema, table}
+      field =
+        case get_table_alias(acc, field) do
+          nil ->
+            schema = resolve_schema(acc, field)
+            %{field | schema: schema}
+
+          {schema, table} ->
+            %{field | schema: schema, table: table}
         end
 
-      field = %{field | schema: schema, table: table}
       Map.update!(acc, :request, fn req ->
         Request.put_field(req, acc.op, field)
       end)
     end
+
+    defp resolve_schema(acc, %Field{schema: nil, table: table}) do
+      case Enum.find(acc.tables, fn {_, t} -> t == table end) do
+        nil -> JumpWire.Proxy.SQL.Parser.system_schema(table)
+        {schema, _} -> schema
+      end
+    end
+    defp resolve_schema(_acc, %Field{schema: schema}), do: schema
   end
 
   def parse_postgresql(_query), do: :erlang.nif_error(:nif_not_loaded)
@@ -84,6 +90,7 @@ defmodule JumpWire.Proxy.SQL.Parser do
 
   def to_request(statement = %Statement.Update{}) do
     acc = %Traveler{op: :select}
+    |> find_table(statement.from)
     |> find_table(statement.table)
     |> find_fields(statement.selection)
 
@@ -164,8 +171,10 @@ defmodule JumpWire.Proxy.SQL.Parser do
   end
 
   def find_fields(acc, select = %Statement.Select{}) do
-    %{op: op, table: table, schema: schema} = acc
+    %{op: op, tables: tables} = acc
+
     acc = acc
+    |> Map.put(:tables, [])
     |> find_table(select.from)
     |> Map.put(:op, :select)
     |> find_fields(select.from)
@@ -176,8 +185,7 @@ defmodule JumpWire.Proxy.SQL.Parser do
     end)
     |> find_fields(select.selection)
     |> Map.put(:op, op)
-    |> Map.put(:schema, schema)
-    |> Map.put(:table, table)
+    |> Map.put(:tables, tables)
   end
 
   def find_fields(acc, %Statement.With{cte_tables: tables}) do
@@ -219,9 +227,7 @@ defmodule JumpWire.Proxy.SQL.Parser do
   end
 
   def find_fields(acc, %Statement.InList{expr: expr, list: values}) do
-    Enum.reduce(values, acc, fn val, acc ->
-      find_fields(acc, val)
-    end)
+    Enum.reduce(values, acc, fn val, acc -> find_fields(acc, val) end)
     |> find_fields(expr)
   end
 
@@ -234,18 +240,15 @@ defmodule JumpWire.Proxy.SQL.Parser do
   end
 
   def find_fields(acc, %Statement.Assignment{value: value, id: idents}) do
-    %{op: op, table: table, schema: schema} = acc
+    [table | _] = tables = acc.tables
     acc
     |> Map.put(:op, :select)
-    # assignments across joins are ambiguous without knowing the full
-    # schema
-    |> Map.put(:schema, nil)
-    |> Map.put(:table, nil)
     |> find_fields(value)
-    |> Map.put(:op, op)
-    |> Map.put(:schema, schema)
-    |> Map.put(:table, table)
+    |> Map.put(:op, :update)
+    # updates can't be on any joined tables
+    |> Map.put(:tables, [table])
     |> find_fields(idents)
+    |> Map.put(:tables, tables)
   end
 
   def find_fields(acc, %Statement.Function{args: args}) do
@@ -298,8 +301,12 @@ defmodule JumpWire.Proxy.SQL.Parser do
   end
 
   def find_fields(acc, {:qualified_wildcard, name, _options}) do
-    acc = find_table(acc, name)
-    field = %Field{column: :wildcard, table: acc.table, schema: acc.schema}
+    {schema, table} =
+      case name do
+        [%Ident{value: schema}, %Ident{value: table}] -> {schema, table}
+        [%Ident{value: table}] -> {nil, table}
+      end
+    field = %Field{column: :wildcard, table: table, schema: schema}
     Traveler.put_field(acc, field)
   end
 
@@ -383,7 +390,6 @@ defmodule JumpWire.Proxy.SQL.Parser do
   def find_fields(acc, "do_nothing"), do: acc
   def find_fields(acc, query = %Statement.DoUpdate{}) do
     op = acc.op
-
     acc = Map.put(acc, :op, :update)
     acc = Enum.reduce(query.assignments, acc, fn expr, acc -> find_fields(acc, expr) end)
 
@@ -448,7 +454,6 @@ defmodule JumpWire.Proxy.SQL.Parser do
     find_table(acc, relation)
   end
 
-
   def find_table(acc, %Statement.TableWithJoins{relation: table, joins: joins}) do
     joins
     |> Enum.reduce(acc, fn join, acc -> find_table(acc, join) end)
@@ -464,8 +469,6 @@ defmodule JumpWire.Proxy.SQL.Parser do
 
     acc
     |> Map.update!(:tables, fn t -> [{schema, table} | t] end)
-    |> Map.put(:schema, schema)
-    |> Map.put(:table, table)
     |> put_table_alias(table_alias)
   end
   def find_table(acc, %Statement.TableFunction{expr: expr, alias: table_alias}) do
@@ -488,27 +491,21 @@ defmodule JumpWire.Proxy.SQL.Parser do
     |> find_table(expr)
     |> find_fields(expr)
     |> Map.update!(:tables, fn t -> [{nil, :derived} | t] end)
-    |> Map.put(:schema, nil)
-    |> Map.put(:table, :derived)
     |> put_table_alias(table_alias)
   end
   def find_table(acc, %Ident{value: table}) do
-    acc
-    |> Map.update!(:tables, fn t -> [{nil, table} | t] end)
-    |> Map.put(:table, table)
+    Map.update!(acc, :tables, fn t -> [{nil, table} | t] end)
   end
   def find_table(acc, [%Ident{value: schema}, %Ident{value: table}]) do
-    acc
-    |> Map.update!(:tables, fn t -> [{schema, table} | t] end)
-    |> Map.put(:schema, schema)
-    |> Map.put(:table, table)
+    Map.update!(acc, :tables, fn t -> [{schema, table} | t] end)
   end
-  def find_table(acc, _), do: %{acc | schema: nil, table: nil}
+  def find_table(acc, _), do: %{acc | tables: []}
 
   def put_table_alias(acc, nil), do: acc
   def put_table_alias(acc, %Statement.TableAlias{name: %Ident{value: name}}) do
+    [table | _] = acc.tables
     Map.update!(acc, :table_aliases, fn aliases ->
-      Map.put(aliases, name, {acc.schema, acc.table})
+      Map.put(aliases, name, table)
     end)
   end
 end

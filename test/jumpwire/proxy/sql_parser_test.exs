@@ -123,9 +123,8 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
 
   test "parsing of a select with dot syntax" do
     query = "SELECT foo FROM public.jam WHERE jam.price = 1"
-    assert {:ok, [query]} = Parser.parse_postgresql(query)
-
-    assert {:ok, request} = Parser.to_request(query)
+    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, request} = Parser.to_request(statement)
     assert request.select == [
       %Field{table: "jam", column: "price", schema: "public"},
       %Field{table: "jam", column: "foo", schema: "public"},
@@ -152,7 +151,8 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
 
     assert {:ok, request} = Parser.to_request(query)
     assert request.select == [
-      %Field{column: "first_name", table: nil},
+      %Field{column: "first_name", table: "employees"},
+      %Field{column: "first_name", table: "accounts"},
       %Field{column: "sales_person", table: "accounts"},
       %Field{column: "id", table: "employees"},
     ]
@@ -171,7 +171,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
 
     assert {:ok, request} = Parser.to_request(query)
     assert request.select == [
-      %Field{column: "sales_count", table: nil},
+      %Field{column: "sales_count", table: "employees"},
       %Field{column: "name", table: "accounts"},
       %Field{column: "sales_person", table: "accounts"},
       %Field{column: "id", table: "employees"},
@@ -321,7 +321,9 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     assert request.select == [
       %Field{column: "name", table: "cities"},
       %Field{column: "id", table: "cities"},
+      %Field{column: "city_id", table: "cities"},
       %Field{column: "city_id", table: "employees"},
+      %Field{column: "name", table: "cities"},
       %Field{column: "name", table: "employees"},
     ]
   end
@@ -443,9 +445,13 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     assert {:ok, [statement]} = Parser.parse_postgresql(query)
     assert {:ok, request} = Parser.to_request(statement)
     assert request.select == [
+      %Field{table: "workers", column: "days_worked"},
       %Field{table: "rental_days", column: "days_worked"},
+      %Field{table: "workers", column: "days_worked"},
       %Field{table: "rental_days", column: "days_worked"},
+      %Field{table: "workers", column: "last_name"},
       %Field{table: "rental_days", column: "last_name"},
+      %Field{table: "workers", column: "first_name"},
       %Field{table: "rental_days", column: "first_name"},
       %Field{table: "workers", column: "staff_id"},
       %Field{table: "rental_days", column: "staff_id"},
@@ -577,6 +583,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
       %Field{schema: "pg_catalog", table: "pg_publication", column: "puballtables"},
       %Field{schema: "pg_catalog", table: "pg_publication", column: "pubname"},
       %Field{schema: "pg_catalog", table: "pg_publication_rel", column: "prrelid"},
+      %Field{schema: "pg_catalog", table: "pg_publication_rel", column: "pubname"},
       %Field{schema: "pg_catalog", table: "pg_publication", column: "pubname"},
       %Field{schema: "pg_catalog", table: "pg_publication_rel", column: "prpubid"},
       %Field{schema: "pg_catalog", table: "pg_publication", column: "oid"},
@@ -658,10 +665,6 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     assert {:ok, [statement]} = Parser.parse_postgresql(query)
     assert {:ok, request} = Parser.to_request(statement)
     assert request.select == [
-      # TODO: users shouldn't show up as a wildcard,
-      # there is enough information to determine that the wildcard only
-      # applies to the derived table
-      %Field{table: "users", column: :wildcard},
       %Field{table: :derived, column: :wildcard},
       %Field{table: "users", column: "name"},
     ]
@@ -709,7 +712,6 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     assert {:ok, [statement]} = Parser.parse_postgresql(query)
     assert {:ok, request} = Parser.to_request(statement)
     assert request.select == [
-      %Field{schema: "pg_catalog", table: "pg_namespace", column: :wildcard},
       %Field{schema: "pg_catalog", table: "pg_class", column: :wildcard},
       %Field{schema: "pg_catalog", table: "pg_namespace", column: :wildcard},
     ]
@@ -819,6 +821,22 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     assert request.select == [
       %Field{table: "scores", column: "mark"},
       %Field{table: "scores", column: "mark"},
+    ]
+  end
+
+  test "parsing implicit table name in join" do
+    query = """
+    SELECT * FROM weather JOIN cities ON city = name;
+    """
+    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, request} = Parser.to_request(statement)
+    assert request.select == [
+      %Field{table: "cities", column: :wildcard},
+      %Field{table: "weather", column: :wildcard},
+      %Field{table: "cities", column: "name"},
+      %Field{table: "weather", column: "name"},
+      %Field{table: "cities", column: "city"},
+      %Field{table: "weather", column: "city"},
     ]
   end
 
