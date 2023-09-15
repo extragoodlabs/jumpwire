@@ -66,9 +66,15 @@ defmodule JumpWire.ACME do
     end)
   end
 
-  defp validate_domain(""), do: :invalid
-  defp validate_domain(host) when is_binary(host) and byte_size(host) <= 64, do: :ok
-  defp validate_domain(_), do: :invalid
+  def validate_domain(""), do: :invalid
+  def validate_domain("."), do: :invalid
+  def validate_domain(host) when is_binary(host) do
+    host |> String.split(".", trim: true) |> validate_domain()
+  end
+  def validate_domain([part | _]) when byte_size(part) > 63, do: :invalid
+  def validate_domain([_ | rest]), do: validate_domain(rest)
+  def validate_domain([]), do: :ok
+  def validate_domain(_), do: :invalid
 
   def order_cert(domain, config) do
     retry with: exponential_backoff(1_000) |> randomize() |> expiry(300_000) do
