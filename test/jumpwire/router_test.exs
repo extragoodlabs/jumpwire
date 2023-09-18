@@ -5,6 +5,12 @@ defmodule JumpWire.RouterTest do
 
   @opts Router.init([])
 
+  test "route exists at /" do
+    conn = conn(:get, "/")
+    |> Router.call(@opts)
+    assert conn.status == 200
+  end
+
   test "ping always pongs" do
     conn = conn(:get, "/ping")
     |> Router.call(@opts)
