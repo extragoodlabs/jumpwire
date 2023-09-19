@@ -170,6 +170,16 @@ defmodule JumpWire.Proxy.Database do
         end
       end
 
+      # A task started from this process completed successfully
+      def handle_info({ref, _result}, state) when is_reference(ref) do
+        {:noreply, state}
+      end
+
+      # A task started from this process failed
+      def handle_info({:DOWN, _ref, :process, _pid, _reason}, state) do
+        {:noreply, state}
+      end
+
       def handle_info(msg, state) do
         # TODO: if the socket is closed from the DBs side,
         # we should try to re-establish it
