@@ -26,12 +26,11 @@ defmodule JumpWire.SSO do
   is used when the cert is dynamically generated or otherwise loaded
   at runtime.
   """
-  def set_tls_cert(name, cert, key) do
+  def set_tls_cert(_name, cert, key) do
     opts = Application.get_env(:samly, Samly.Provider)
 
     service_providers = opts
     |> Keyword.get(:service_providers, [])
-    |> Stream.filter(fn sp -> sp[:generated_cert] == name end)
     |> Stream.map(&Samly.SpData.load_provider/1)
     |> Stream.map(fn sp -> put_new_cert(sp, cert, key) end)
     |> Stream.filter(fn sp_data -> sp_data.valid? end)
