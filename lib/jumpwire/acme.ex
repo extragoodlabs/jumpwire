@@ -199,16 +199,19 @@ defmodule JumpWire.ACME do
       delay = Map.get(config, :cert_delay_seconds, 0)
       Process.sleep(delay * 1000)
 
-      Logger.info("Ordering a new certificate for #{domain}")
-      with {:ok, order, session} <- API.new_order(session, [domain]) do
-        Logger.debug("Waiting for cert order to be ready")
-        case process_new_order(session, order, domain, config) do
-          {:error, _} = err -> err
-          {private_key, order, session} ->
-            {:ok, cert, chain, _session} = API.get_cert(session, order)
-            cert_data = %{cert: cert, key: private_key, cacert: chain}
-            store_cert(cert_data, domain, config)
-            {:ok, cert_data}
+      retry with: exponential_backoff(1_000) |> randomize() |> expiry(300_000) do
+        Logger.info("Ordering a new certificate for #{domain}")
+        with {:ok, order, session} <- API.new_order(session, [domain]),
+             _ <- Logger.debug("Waiting for cert order to be ready"),
+             {private_key, order, session} <- process_new_order(session, order, domain, config) do
+          {:ok, cert, chain, _session} = API.get_cert(session, order)
+          cert_data = %{cert: cert, key: private_key, cacert: chain}
+          store_cert(cert_data, domain, config)
+          {:ok, cert_data}
+        else
+          err ->
+            Logger.error("Failed to process ACME order: #{inspect err}")
+            :error
         end
       end
     end)
