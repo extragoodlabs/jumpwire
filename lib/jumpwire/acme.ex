@@ -195,9 +195,12 @@ defmodule JumpWire.ACME do
   end
 
   defp new_cert(session, domain, config) do
-    Logger.info("Ordering a new certificate for #{domain}")
-    with {:ok, order, session} <- API.new_order(session, [domain]) do
-      Task.Supervisor.async_nolink(JumpWire.ACMESupervisor, fn ->
+    Task.Supervisor.async_nolink(JumpWire.ACMESupervisor, fn ->
+      delay = Map.get(config, :cert_delay_seconds, 0)
+      Process.sleep(delay * 1000)
+
+      Logger.info("Ordering a new certificate for #{domain}")
+      with {:ok, order, session} <- API.new_order(session, [domain]) do
         Logger.debug("Waiting for cert order to be ready")
         case process_new_order(session, order, domain, config) do
           {:error, _} = err -> err
@@ -207,8 +210,8 @@ defmodule JumpWire.ACME do
             store_cert(cert_data, domain, config)
             {:ok, cert_data}
         end
-      end)
-    end
+      end
+    end)
   end
 
   defp store_cert(value, name, config) do

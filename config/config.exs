@@ -108,6 +108,7 @@ config :jumpwire, :acme,
   directory_url: "https://acme-staging-v02.api.letsencrypt.org/directory",
   # default to 30 days
   cert_renewal_seconds: 60 * 60 * 24 * 30,
+  cert_delay_seconds: 0,
   cert_dir: "priv/pki",
   hostname: nil,
   email: nil

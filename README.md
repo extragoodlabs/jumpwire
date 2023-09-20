@@ -252,7 +252,8 @@ The available configuration options are detailed in [our documentation](https://
 | JUMPWIRE_ENV | prod | Environment to use in events for 3rd party error reporting. |
 | JUMPWIRE_PARSE_REQUESTS | true | When true, requests being proxied through JumpWire will be inspected and access policies will be applied. |
 | JUMPWIRE_PARSE_RESPONSES | true | When true, responses from requests proxied through JumpWire will be inspected and access policies will be applied. |
-| ACME_GENERATE_CERT | true |
+| ACME_GENERATE_CERT | true | Enables issuance of a TLS certificate using ACME/letsencrypt. |
+| ACME_GENERATE_CERT_DELAY | 0 | How to long to wait after startup before attempting to issue a certificate, in seconds. |
 | ACME_CERT_DIRECTORY | priv/pki | Disk location to store ACME generated certificates. |
 | ACME_EMAIL | - | Email to use in CSRs. |
 | JUMPWIRE_SSO_METADATA_PATH | - | Path to an XML file containing metadata for the SSO IdP. |

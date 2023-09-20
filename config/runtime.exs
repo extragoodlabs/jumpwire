@@ -271,6 +271,10 @@ with {:ok, val} <- fetch_boolean_env("ACME_GENERATE_CERT") do
   config :jumpwire, :acme, generate: val
 end
 
+with {:ok, val} <- fetch_integer_env("ACME_GENERATE_CERT_DELAY") do
+  config :jumpwire, :acme, cert_delay_seconds: val
+end
+
 with {:ok, email} <- System.fetch_env("ACME_EMAIL") do
   config :jumpwire, :acme, email: email
 end
