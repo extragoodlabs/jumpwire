@@ -509,6 +509,33 @@ After authenticating, enter the code displayed:
 
 ![SSO Success](../images/sso-success.png)
 
+```shell
+$ psql "postgres://test-db.hook.jumpwire.cloud/test_db"
+NOTICE:  Protected by JumpWire
+Authenticate with jwctl:
+
+jwctl db login SFMyNTY.g2gxxx
+```
+
+```shell
+$ jwctl db login SFMyNTY.g2gxxx
+[INFO] Choose a database to connect to:
+[INFO] Authentication request to test_db is approved!
+```
+
+```shell
+$ psql "postgres://test-db.hook.jumpwire.cloud/test_db"
+NOTICE:  Protected by JumpWire
+Authenticate with jwctl:
+
+jwctl db login SFMyNTY.g2gxxx
+psql (15.3 (Ubuntu 15.3-1.pgdg22.04+1))
+SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, compression: off)
+Type "help" for help.
+
+test_db=>
+```
+
 ### Notes on production release
 
 In this walkthrough, we added a few steps that would not be necessary for a production installation of the JumpWire gateway.
