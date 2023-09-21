@@ -37,9 +37,9 @@ defmodule JumpWire.TLS do
   end
 
   defp cert_opts(%{key: nil}), do: []
-  defp cert_opts(%{cacert: nil}), do: []
+  defp cert_opts(%{cacerts: nil}), do: []
   defp cert_opts(%{cert: nil}), do: []
-  defp cert_opts(%{key: key, cacert: cacert, cert: cert}), do: [key: key, cacert: cacert, cert: cert]
+  defp cert_opts(%{key: key, cacerts: cacerts, cert: cert}), do: [key: key, cacerts: cacerts, cert: cert]
   defp cert_opts(opts) when is_list(opts), do: opts
   defp cert_opts(_), do: []
 end

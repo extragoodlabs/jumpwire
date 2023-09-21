@@ -7,16 +7,20 @@ defmodule JumpWire.ACME do
   alias SiteEncrypt.Acme.Client.API
   use JumpWire.Retry
 
-  def store_cert_config(name, %{key: key, cert: cert, cacert: chain}) do
+  def store_cert_config(name, %{key: key, cert: cert, cacerts: chain}) do
     pem_key = X509.PrivateKey.from_pem!(key)
     der_cert = X509.Certificate.from_pem!(cert) |> X509.Certificate.to_der()
-    der_chain = X509.Certificate.from_pem!(chain) |> X509.Certificate.to_der()
+    der_chain = chain
+    |> String.split("\n\n")
+    |> Stream.map(&X509.Certificate.from_pem!/1)
+    |> Enum.map(&X509.Certificate.to_der/1)
+
     store_cert_config(name, pem_key, der_cert, der_chain)
   end
 
   defp store_cert_config(name, pem_key, der_cert, der_chain) do
     der_key = {:RSAPrivateKey, X509.PrivateKey.to_der(pem_key)}
-    value = [key: der_key, cert: der_cert, cacert: der_chain]
+    value = [key: der_key, cert: der_cert, cacerts: der_chain]
     JumpWire.SSO.set_tls_cert(name, der_cert, pem_key)
     name = String.to_charlist(name)
     JumpWire.GlobalConfig.put(:certificates, name, value)
@@ -43,7 +47,7 @@ defmodule JumpWire.ACME do
         subject_alt_name: X509.Certificate.Extension.subject_alt_name(["localhost", "*"])
       ]
     ) |> X509.Certificate.to_der()
-    store_cert_config("selfsigned", key, cert, cert)
+    store_cert_config("selfsigned", key, cert, [cert])
   end
 
   def ensure_cert(config = %{hostname: hostname}) when is_binary(hostname) do
@@ -147,7 +151,7 @@ defmodule JumpWire.ACME do
   defp read_from_disk(domain, %{cert_dir: root_dir}) do
     path = Path.join(root_dir, domain)
 
-    cert_data = [:key, :cert, :cacert]
+    cert_data = [:key, :cert, :cacerts]
     |> Enum.map(fn key ->
       case Path.join(path, Atom.to_string(key)) |> File.read() do
         {:ok, data} -> {key, data}
@@ -205,7 +209,7 @@ defmodule JumpWire.ACME do
              _ <- Logger.debug("Waiting for cert order to be ready"),
              {private_key, order, session} <- process_new_order(session, order, domain, config) do
           {:ok, cert, chain, _session} = API.get_cert(session, order)
-          cert_data = %{cert: cert, key: private_key, cacert: chain}
+          cert_data = %{cert: cert, key: private_key, cacerts: chain}
           store_cert(cert_data, domain, config)
           {:ok, cert_data}
         else
@@ -226,7 +230,7 @@ defmodule JumpWire.ACME do
     path = Path.join(config.cert_dir, name)
     File.mkdir_p!(path)
     Enum.each(cert_info, fn {key, value} ->
-      # write the key, cert, and cacert to separate files
+      # write the key, cert, and cacerts to separate files
       Path.join(path, Atom.to_string(key)) |> File.write(value)
     end)
   end
