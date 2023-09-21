@@ -257,14 +257,16 @@ ghcr.io/extragoodlabs/jumpwire:latest
 
 We can go back to the SAML app in the Google Admin from the section above, and click "TEST SAML LOGIN". It will send a valid SAML response to the ACS URL. If everything works (and we click through the ngrok landing page), we should see this:
 
-![SAML Success](../images/goog-saml-success.png)
+```
+{"message":"Welcome to JumpWire"}
+```
 
-Don't worry about the 404 `not found`! This is what the gateway returns for the root path of the API. Peaking at the ngrok output, we can see that the POST from Google IdP to the ACS URL is completing with a `302 Found`.
+This is what the gateway returns for the root path of the API. Peaking at the ngrok output, we can see that the POST from Google IdP to the ACS URL is completing with a `302 Found`.
 ```shell
 HTTP Requests
 -------------
 GET  /favicon.ico              404 Not Found
-GET  /                         404 Not Found
+GET  /                         200 Found
 POST /sso/sp/consume/google    302 Found
 ```
 

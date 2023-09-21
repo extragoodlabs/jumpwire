@@ -173,7 +173,7 @@ defmodule JumpWire.Proxy.Database do
       def handle_info(msg, state) do
         # TODO: if the socket is closed from the DBs side,
         # we should try to re-establish it
-        Logger.debug("Closing sockets: #{inspect msg}")
+        # Logger.debug("Closing sockets: #{inspect msg}")
         JumpWire.Proxy.Database.close_proxy(state)
       end
     end

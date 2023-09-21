@@ -41,15 +41,26 @@ defmodule JumpWire.SSO.Router do
   end
 
   @sso_result_template """
-  <!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\"
-    \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">
-  <html xmlns=\"http://www.w3.org/1999/xhtml\" xml:lang=\"en\" lang=\"en\">
+  <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+  <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
     <head>
-      <meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"/>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+      <script>
+        function copyCode() {
+          var copyText = document.getElementById("code");
+          navigator.clipboard.writeText(copyText.value);
+        }
+      </script>
     </head>
     <body>
-      <p>Successfully authenticated! Enter the following code in the CLI:</p>
-      <p><%= @token %></p>
+      <div style="width: 70%; margin: auto; border: 1px solid #81b29a; text-align: center; padding-bottom: 8px">
+        <p>✅ Successfully authenticated!</p>
+        <p>Enter the following code in the CLI:</p>
+        <pre><%= @token %></pre>
+        <input id="code" type="hidden" value="<%= @token %>" />
+        <button onclick="copyCode()">Copy code</button>
+      </div>
     </body>
   </html>
   """

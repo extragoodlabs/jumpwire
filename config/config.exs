@@ -60,6 +60,7 @@ config :jumpwire, :proxy,
   parse_responses: true
 
 config :jumpwire, JumpWire.Proxy.Postgres,
+  keepalive: true,
   port: 5432,
   pool_size: 4
 config :jumpwire, JumpWire.Proxy.MySQL,
