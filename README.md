@@ -58,6 +58,13 @@ When a client attempts to connect through the proxy without credentials, a magic
 
 ![DB Authorization Architecture](/images/DB%20Authorization%20Architecture.png)
 
+## Installation Guides
+
+Check out these handy installation guides as a reference for configuring or deploying JumpWire in common use-case setups and public clouds.
+
+- [Set up a bastion gateway for AWS RDS](./docs/sso-guide.md) - Run JumpWire on AWS to provide access to an RDS instance in a private VPC
+- [Login to PostgreSQL with Google Single Sign-On](./docs/sso-guide.md) - Run JumpWire locally and learn how to configure SSO to use Google auth
+
 ## Quick Install
 
 JumpWire is packaged as a Docker image and doesn't have any hard dependencies (besides the database being proxied, of course). The image is hosted on [GitHub Packages](https://github.com/extragoodlabs/jumpwire/pkgs/container/jumpwire)
@@ -201,12 +208,6 @@ The following ports are used by default:
 - `4369` - Internal port used for nodes in the same cluster to connect to each other. When running more than one JumpWire node, his must be exposed to other nodes in the cluster but should not be publicly accessible.
 
 These ports can be changed using environmental variables as noted below.
-
-## Installation Guides
-
-Check out these handy installation guides as a reference for configuring or deploying JumpWire in common use-case setups and public clouds.
-
-- [Login to database with Google Single Sign-On](./docs/sso-guide.md)
 
 ## Configuration
 
