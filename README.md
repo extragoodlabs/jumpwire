@@ -28,6 +28,16 @@ Here are some examples of what JumpWire can do:
 - Provide on-call engineers a way to quickly elevate database access when responding to an incident
 - Keep an audit trail of access to sensitive data
 
+## Contents
+
+- [Features](#features)
+- [How it works](#how-it-works)
+- [Quick install](#quick-install)
+- [Installation guides](#installation-guides)
+- [Configuration](#configuration)
+- [CLI](#cli)
+
+
 ## Features
 
 Currently, JumpWire supports proxying database clients to both PostgreSQL and MySQL.
@@ -185,10 +195,6 @@ psql -h localhost -p 6432 -U 0779b97a-c04a-48f9-9483-22e8b0487de4 -W -d test_db
 # test_db=#
 ```
 
-### Kubernetes
-
-A Helm chart is available for deploying JumpWire into Kubernetes. Documentation is available at [https://docs.jumpwire.io/self-hosting-with-helm](https://docs.jumpwire.io/self-hosting-with-helm).
-
 ### Ports
 
 The following ports are used by default:
@@ -206,7 +212,9 @@ These ports can be changed using environmental variables as noted below.
 
 Check out these handy installation guides as a reference for configuring or deploying JumpWire in common use-case setups and public clouds.
 
-- [Login to database with Google Single Sign-On](./docs/sso-guide.md)
+- [Deploy JumpWire into Kubernetes](https://docs.jumpwire.io/self-hosting-with-helm) - Run JumpWire on Kubernetes using our official helm chart
+- [Set up a bastion gateway for AWS RDS](./docs/rds-gateway-guide.md) - Run JumpWire on AWS to provide access to an RDS instance in a private VPC
+- [Login to PostgreSQL with Google Single Sign-On](./docs/sso-guide.md) - Run JumpWire locally and learn how to configure SSO using Google Workspace
 
 ## Configuration
 
