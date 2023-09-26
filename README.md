@@ -28,6 +28,16 @@ Here are some examples of what JumpWire can do:
 - Provide on-call engineers a way to quickly elevate database access when responding to an incident
 - Keep an audit trail of access to sensitive data
 
+## Contents
+
+- [Features](#features)
+- [How it works](#how-it-works)
+- [Quick install](#quick-install)
+- [Installation guides](#installation-guides)
+- [Configuration](#configuration)
+- [CLI](#cli)
+
+
 ## Features
 
 Currently, JumpWire supports proxying database clients to both PostgreSQL and MySQL.
@@ -57,13 +67,6 @@ JumpWire directly implements native database protocols. All standard clients wor
 When a client attempts to connect through the proxy without credentials, a magic login link is generated. Using the [jwctl CLI](https://github.com/extragoodlabs/jwctl) or an integration available with JumpWire Enterprise, the login attempt can be linked to an SSO user and associated permissions.
 
 ![DB Authorization Architecture](/images/DB%20Authorization%20Architecture.png)
-
-## Installation Guides
-
-Check out these handy installation guides as a reference for configuring or deploying JumpWire in common use-case setups and public clouds.
-
-- [Set up a bastion gateway for AWS RDS](./docs/sso-guide.md) - Run JumpWire on AWS to provide access to an RDS instance in a private VPC
-- [Login to PostgreSQL with Google Single Sign-On](./docs/sso-guide.md) - Run JumpWire locally and learn how to configure SSO to use Google auth
 
 ## Quick Install
 
@@ -192,10 +195,6 @@ psql -h localhost -p 6432 -U 0779b97a-c04a-48f9-9483-22e8b0487de4 -W -d test_db
 # test_db=#
 ```
 
-### Kubernetes
-
-A Helm chart is available for deploying JumpWire into Kubernetes. Documentation is available at [https://docs.jumpwire.io/self-hosting-with-helm](https://docs.jumpwire.io/self-hosting-with-helm).
-
 ### Ports
 
 The following ports are used by default:
@@ -208,6 +207,14 @@ The following ports are used by default:
 - `4369` - Internal port used for nodes in the same cluster to connect to each other. When running more than one JumpWire node, his must be exposed to other nodes in the cluster but should not be publicly accessible.
 
 These ports can be changed using environmental variables as noted below.
+
+## Installation Guides
+
+Check out these handy installation guides as a reference for configuring or deploying JumpWire in common use-case setups and public clouds.
+
+- [Deploy JumpWire into Kubernetes](https://docs.jumpwire.io/self-hosting-with-helm) - Run JumpWire on Kubernetes using our official helm chart
+- [Set up a bastion gateway for AWS RDS](./docs/rds-gateway-guide.md) - Run JumpWire on AWS to provide access to an RDS instance in a private VPC
+- [Login to PostgreSQL with Google Single Sign-On](./docs/sso-guide.md) - Run JumpWire locally and learn how to configure SSO using Google Workspace
 
 ## Configuration
 
