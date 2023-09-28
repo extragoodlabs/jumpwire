@@ -2,7 +2,7 @@ defmodule JumpWire.MixProject do
   use Mix.Project
 
   @docker_image "ghcr.io/extragoodlabs/jumpwire"
-  @version "3.2.0"
+  @version "4.0.0"
 
   def project do
     [
