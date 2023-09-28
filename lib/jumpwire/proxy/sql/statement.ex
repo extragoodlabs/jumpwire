@@ -514,8 +514,8 @@ defmodule JumpWire.Proxy.SQL.Statement do
   typedstruct module: ArrayAgg do
     field :distinct, boolean()
     field :expr, Statement.expr()
-    field :order_by, Statement.OrderByExpr.t()
-    field :limit, Statement.expr()
+    field :order_by, Statement.OrderByExpr.t() | nil
+    field :limit, Statement.expr() | nil
     field :within_group, boolean()
   end
 

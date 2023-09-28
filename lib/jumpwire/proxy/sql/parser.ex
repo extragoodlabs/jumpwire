@@ -316,6 +316,10 @@ defmodule JumpWire.Proxy.SQL.Parser do
     |> find_fields(index.obj)
   end
 
+  def find_fields(acc, %Statement.ArrayAgg{expr: expr, order_by: nil}) do
+    find_fields(acc, expr)
+  end
+
   def find_fields(acc, %Statement.ArrayAgg{expr: expr, order_by: order_by}) do
     order_by
     |> Enum.reduce(acc, fn order, acc -> find_fields(acc, order.expr) end)
