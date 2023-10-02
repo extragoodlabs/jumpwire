@@ -5,11 +5,11 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
 
   describe "postgresql" do
     test "invalid statement" do
-      assert {:error, {:parser_error, _}} = Parser.parse_postgresql("whabadabadoooooo")
+      assert {:error, {:parser_error, _}} = parse_query("whabadabadoooooo")
     end
 
     test "wildcard select" do
-      assert {:ok, [statement]} = Parser.parse_postgresql("select * from foo;")
+      assert {:ok, [statement]} = parse_query("select * from foo;")
       assert_table_select(statement, "foo")
       assert [
         %WildcardAdditionalOptions{},
@@ -22,7 +22,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     end
 
     test "column select" do
-      assert {:ok, [statement]} = Parser.parse_postgresql("select baz, ya from foo;")
+      assert {:ok, [statement]} = parse_query("select baz, ya from foo;")
       assert_table_select(statement, "foo")
       assert [
         %Ident{value: "baz"},
@@ -37,11 +37,13 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     end
 
     test "complex select" do
-      query = "SELECT a, b, 123, myfunc(b) \
-           FROM table_1 \
-           WHERE a > b AND b <= 100 \
-           ORDER BY a DESC, b"
-      assert {:ok, [statement]} = Parser.parse_postgresql(query)
+      query = """
+      SELECT a, b, 123, myfunc(b)
+      FROM table_1
+      WHERE a > b AND b <= 100
+      ORDER BY a DESC, b;
+      """
+      assert {:ok, [statement]} = parse_query(query)
       assert_table_select(statement, "table_1")
       assert [
         %Ident{value: "a"},
@@ -72,8 +74,8 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
   end
 
   test "parsing of a single conditional" do
-    query = "SELECT * FROM jam WHERE price = 1"
-    assert {:ok, [query]} = Parser.parse_postgresql(query)
+    query = "SELECT * FROM jam WHERE price = 1;"
+    assert {:ok, [query]} = parse_query(query)
     assert_table_select(query, "jam")
 
     assert {:ok, request} = Parser.to_request(query)
@@ -84,8 +86,8 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
   end
 
   test "parsing of multiple where clauses" do
-    query = "SELECT * FROM jam WHERE price < 5 OR (flavor = 'berry good' AND sale = true)"
-    assert {:ok, [query]} = Parser.parse_postgresql(query)
+    query = "SELECT * FROM jam WHERE price < 5 OR (flavor = 'berry good' AND sale = true);"
+    assert {:ok, [query]} = parse_query(query)
     assert_table_select(query, "jam")
 
     assert {:ok, request} = Parser.to_request(query)
@@ -99,7 +101,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
 
   test "parsing of list membership queries" do
     query = "SELECT * FROM parser WHERE work IN ('fun', 'easy');"
-    assert {:ok, [query]} = Parser.parse_postgresql(query)
+    assert {:ok, [query]} = parse_query(query)
     assert_table_select(query, "parser")
 
     assert {:ok, request} = Parser.to_request(query)
@@ -111,7 +113,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
 
   test "parsing of list exclusion queries" do
     query = "SELECT * FROM parser WHERE work NOT IN ('fun', 'easy');"
-    assert {:ok, [query]} = Parser.parse_postgresql(query)
+    assert {:ok, [query]} = parse_query(query)
     assert_table_select(query, "parser")
 
     assert {:ok, request} = Parser.to_request(query)
@@ -122,8 +124,8 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
   end
 
   test "parsing of a select with dot syntax" do
-    query = "SELECT foo FROM public.jam WHERE jam.price = 1"
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    query = "SELECT foo FROM public.jam WHERE jam.price = 1;"
+    assert {:ok, [statement]} = parse_query(query)
     assert {:ok, request} = Parser.to_request(statement)
     assert request.select == [
       %Field{table: "jam", column: "price", schema: "public"},
@@ -132,8 +134,8 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
   end
 
   test "parsing of an update statement" do
-    query = "UPDATE parser SET flavor = 'mud' WHERE flavor = 'candy apple'"
-    assert {:ok, [query]} = Parser.parse_postgresql(query)
+    query = "UPDATE parser SET flavor = 'mud' WHERE flavor = 'candy apple';"
+    assert {:ok, [query]} = parse_query(query)
     assert_table_update(query, "parser")
 
     assert {:ok, request} = Parser.to_request(query)
@@ -146,7 +148,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     UPDATE accounts SET contact_first_name = first_name
     FROM employees WHERE employees.id = accounts.sales_person;
     """
-    assert {:ok, [query]} = Parser.parse_postgresql(query)
+    assert {:ok, [query]} = parse_query(query)
     assert_table_update(query, "accounts")
 
     assert {:ok, request} = Parser.to_request(query)
@@ -166,7 +168,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     UPDATE employees SET sales_count = sales_count + 1 WHERE id =
     (SELECT sales_person FROM accounts WHERE name = 'Acme Corporation');
     """
-    assert {:ok, [query]} = Parser.parse_postgresql(query)
+    assert {:ok, [query]} = parse_query(query)
     assert_table_update(query, "employees")
 
     assert {:ok, request} = Parser.to_request(query)
@@ -182,7 +184,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
   end
 
   test "unbounded deletion" do
-    assert {:ok, [statement]} = Parser.parse_postgresql("delete from foo;")
+    assert {:ok, [statement]} = parse_query("delete from foo;")
     assert_table_delete(statement, "foo")
 
     assert {:ok, request} = Parser.to_request(statement)
@@ -196,7 +198,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     query = """
     delete from foo where abc = '123';
     """
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, [statement]} = parse_query(query)
     assert_table_delete(statement, "foo")
 
     assert {:ok, request} = Parser.to_request(statement)
@@ -212,7 +214,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     query = """
     insert into my_table (a, b, c) values ('q', 1, false);
     """
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, [statement]} = parse_query(query)
     assert_table_insert(statement, "my_table")
 
     assert {:ok, request} = Parser.to_request(statement)
@@ -227,7 +229,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     query = """
     insert into my_table (a, b) values ('q', 1), ('hello', 2);
     """
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, [statement]} = parse_query(query)
     assert_table_insert(statement, "my_table")
 
     assert {:ok, request} = Parser.to_request(statement)
@@ -241,7 +243,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     query = """
     insert into my_table values ('q', 1);
     """
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, [statement]} = parse_query(query)
     assert_table_insert(statement, "my_table")
 
     assert {:ok, request} = Parser.to_request(statement)
@@ -262,7 +264,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     )
     INSERT INTO employees_log SELECT *, current_timestamp FROM upd;
     """
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, [statement]} = parse_query(query)
     assert_table_insert(statement, "employees_log")
 
     assert {:ok, request} = Parser.to_request(statement)
@@ -282,7 +284,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
 
   test "parsing of LIKE clauses" do
     query = "UPDATE employees SET city = 'foo' WHERE city LIKE 'notfoo%';"
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, [statement]} = parse_query(query)
     assert_table_update(statement, "employees")
 
     assert {:ok, request} = Parser.to_request(statement)
@@ -296,7 +298,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
 
   test "parsing of ILIKE clauses" do
     query = "UPDATE employees SET city = 'foo' WHERE city ILIKE 'notfoo%';"
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, [statement]} = parse_query(query)
     assert_table_update(statement, "employees")
 
     assert {:ok, request} = Parser.to_request(statement)
@@ -314,7 +316,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     LEFT JOIN cities
     WHERE city_id = cities.id AND cities.name = 'foo';
     """
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, [statement]} = parse_query(query)
     assert_table_select(statement, "employees")
 
     assert {:ok, request} = Parser.to_request(statement)
@@ -330,7 +332,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
 
   test "parsing of column aliases" do
     query = "SELECT city AS township FROM employees;"
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, [statement]} = parse_query(query)
     assert_table_select(statement, "employees")
 
     assert {:ok, request} = Parser.to_request(statement)
@@ -346,7 +348,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     LEFT JOIN other_schema.cities c
     ON e.city_id = c.id;
     """
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, [statement]} = parse_query(query)
     assert {:ok, request} = Parser.to_request(statement)
 
     assert request.select == [
@@ -358,7 +360,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
 
   test "parsing of CASE clauses" do
     query = "SELECT CASE WHEN id=1 THEN id WHEN id=2 THEN 'two' ELSE name END FROM test;"
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, [statement]} = parse_query(query)
     assert_table_select(statement, "test")
 
     assert {:ok, request} = Parser.to_request(statement)
@@ -379,15 +381,15 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     FROM pg_catalog.pg_class c
          LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
          LEFT JOIN pg_catalog.pg_am am ON am.oid = c.relam
-    WHERE c.relkind IN ('r','p','v','m','S','f','')
+    WHERE c.relkind IN ('r', 'p', 'v', 'm', 'S', 'f', '')
           AND n.nspname <> 'pg_catalog'
           AND n.nspname !~ '^pg_toast'
           AND n.nspname <> 'information_schema'
       AND pg_catalog.pg_table_is_visible(c.oid)
-    ORDER BY 1,2;
+    ORDER BY 1, 2;
     """
 
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, [statement]} = parse_query(query)
     assert {:ok, request} = Parser.to_request(statement)
     assert request.select == [
       %Field{schema: "pg_catalog", table: "pg_class", column: "oid"},
@@ -415,7 +417,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     GROUP BY staff.staff_id;
     """
 
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, [statement]} = parse_query(query)
     assert {:ok, request} = Parser.to_request(statement)
     assert request.select == [
      %Field{table: "payment", column: "amount"},
@@ -442,7 +444,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
       INNER JOIN workers ON rental_days.staff_id = workers.staff_id;
     """
 
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, [statement]} = parse_query(query)
     assert {:ok, request} = Parser.to_request(statement)
     assert request.select == [
       %Field{table: "workers", column: "days_worked"},
@@ -470,7 +472,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     query = """
     SELECT t.oid, t.typname, t.typsend, t.typreceive, t.typoutput, t.typinput,
            coalesce(d.typelem, t.typelem), coalesce(r.rngsubtype, 0),
-           ARRAY (
+           ARRAY(
                SELECT a.atttypid
                FROM pg_attribute AS a
                WHERE a.attrelid = t.typrelid AND a.attnum > 0 AND NOT a.attisdropped
@@ -480,10 +482,10 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     LEFT JOIN pg_type AS d ON t.typbasetype = d.oid
     LEFT JOIN pg_range AS r ON r.rngtypid = t.oid OR (t.typbasetype <> 0 AND r.rngtypid = t.typbasetype)
     WHERE (t.typrelid = 0)
-    AND (t.typelem = 0 OR NOT EXISTS (SELECT 1 FROM pg_catalog.pg_type s WHERE s.typrelid != 0 AND s.oid = t.typelem))
+    AND (t.typelem = 0 OR NOT EXISTS (SELECT 1 FROM pg_catalog.pg_type s WHERE s.typrelid != 0 AND s.oid = t.typelem));
     """
 
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, [statement]} = parse_query(query)
     assert {:ok, request} = Parser.to_request(statement)
     assert request.select == [
       %Field{schema: "pg_catalog", table: "pg_type", column: "typelem"},
@@ -516,8 +518,9 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
   end
 
   test "parsing of variable sets" do
-    query = "SET client_min_messages TO warning;SET TIME ZONE INTERVAL '+00:00' HOUR TO MINUTE;"
-    assert {:ok, [var_statement, tz_statement]} = Parser.parse_postgresql(query)
+    query = "SET client_min_messages TO warning; SET TIME ZONE INTERVAL '+00:00' HOUR TO MINUTE;"
+    expected = "set client_min_messages=warning set time zone interval '+00:00' hour to minute"
+    assert {:ok, [var_statement, tz_statement]} = parse_query(query, expected)
     assert {:ok, _request} = Parser.to_request(var_statement)
     assert {:ok, _request} = Parser.to_request(tz_statement)
   end
@@ -531,7 +534,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
       AND pg_catalog.pg_table_is_visible(c.oid)
     ORDER BY 2, 3;
     """
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, [statement]} = parse_query(query)
     assert {:ok, request} = Parser.to_request(statement)
     assert request.select == [
       %Field{schema: "pg_catalog", table: "pg_class", column: "oid"},
@@ -549,7 +552,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     SELECT c.reloftype::pg_catalog.regtype::pg_catalog.text
     FROM pg_catalog.pg_class c;
     """
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, [statement]} = parse_query(query)
     assert {:ok, request} = Parser.to_request(statement)
     assert request.select == [
       %Field{schema: "pg_catalog", table: "pg_class", column: "reloftype"},
@@ -557,8 +560,8 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
   end
 
   test "parsing implicit cross join" do
-    query = "SELECT * FROM pg_catalog.pg_collation, pg_catalog.pg_type"
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    query = "SELECT * FROM pg_catalog.pg_collation, pg_catalog.pg_type;"
+    assert {:ok, [statement]} = parse_query(query)
     assert {:ok, request} = Parser.to_request(statement)
     assert request.select == [
       %Field{schema: "pg_catalog", table: "pg_collation", column: :wildcard},
@@ -577,7 +580,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     FROM pg_catalog.pg_publication p
     WHERE p.puballtables AND pg_catalog.pg_relation_is_publishable('1234');
     """
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, [statement]} = parse_query(query)
     assert {:ok, request} = Parser.to_request(statement)
     assert request.select == [
       %Field{schema: "pg_catalog", table: "pg_publication", column: "puballtables"},
@@ -601,7 +604,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     AND contype = 'f' AND conparentid = 0
     ORDER BY conname;
     """
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, [statement]} = parse_query(query)
     assert {:ok, request} = Parser.to_request(statement)
     assert request.select == [
       %Field{schema: "pg_catalog", table: "pg_constraint", column: "conparentid"},
@@ -619,7 +622,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     query = """
     SELECT * FROM unnest(ARRAY['a', 'b', 'c']) WITH ORDINALITY;
     """
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, [statement]} = parse_query(query)
     assert {:ok, _request} = Parser.to_request(statement)
   end
 
@@ -628,7 +631,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     SELECT trim(trailing ';' from pg_catalog.pg_get_ruledef(r.oid, true))
     FROM pg_catalog.pg_rewrite r;
     """
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, [statement]} = parse_query(query)
     assert {:ok, request} = Parser.to_request(statement)
     assert request.select == [
       %Field{schema: "pg_catalog", table: "pg_rewrite", column: "oid"},
@@ -637,7 +640,8 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
 
   test "parsing of SUBSTRING statements" do
     query = "SELECT substring(name, 1, name_len) FROM users;"
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    expected = "select substring(name from 1 for name_len) from users"
+    assert {:ok, [statement]} = parse_query(query, expected)
     assert {:ok, request} = Parser.to_request(statement)
     assert request.select == [
       %Field{table: "users", column: "name_len"},
@@ -652,7 +656,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     SELECT (SELECT * FROM unnest(stxkeys)) AS columns
     FROM pg_catalog.pg_statistic_ext;
     """
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, [statement]} = parse_query(query)
     assert {:ok, request} = Parser.to_request(statement)
     assert request.select == [
       %Field{schema: "pg_catalog", table: "pg_statistic_ext", column: :wildcard},
@@ -662,7 +666,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
 
   test "parsing of derived table name" do
     query = "SELECT * FROM (SELECT name FROM users) AS t;"
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, [statement]} = parse_query(query)
     assert {:ok, request} = Parser.to_request(statement)
     assert request.select == [
       %Field{table: :derived, column: :wildcard},
@@ -671,8 +675,8 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
   end
 
   test "parsing of table function" do
-    query = "SELECT bar.bam FROM TABLE(foo) as bar"
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    query = "SELECT bar.bam FROM TABLE(foo) as bar;"
+    assert {:ok, [statement]} = parse_query(query)
     assert {:ok, request} = Parser.to_request(statement)
     assert request.select == [
       %Field{table: "foo", column: "bam"},
@@ -680,8 +684,8 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
   end
 
   test "parsing of nested joins table" do
-    query = "SELECT * FROM (a NATURAL JOIN b) c";
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    query = "SELECT * FROM (a NATURAL JOIN b) c;"
+    assert {:ok, [statement]} = parse_query(query)
     assert {:ok, request} = Parser.to_request(statement)
     assert request.select == [
       %Field{table: "b", column: :wildcard},
@@ -691,10 +695,10 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
 
   test "parsing of ANY" do
     query = """
-    SELECT pg_catalog.array_to_string(array(select rolname from pg_catalog.pg_roles where oid = any (pol.polroles)),',')
+    SELECT pg_catalog.array_to_string(array(select rolname from pg_catalog.pg_roles where oid = any(pol.polroles)), ',')
     FROM pg_catalog.pg_policy pol;
     """
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, [statement]} = parse_query(query)
     assert {:ok, request} = Parser.to_request(statement)
     assert request.select == [
       %Field{schema: "pg_catalog", table: "pg_policy", column: "polroles"},
@@ -709,7 +713,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     UNION SELECT * FROM pg_namespace
     UNION SELECT * FROM pg_class;
     """
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, [statement]} = parse_query(query)
     assert {:ok, request} = Parser.to_request(statement)
     assert request.select == [
       %Field{schema: "pg_catalog", table: "pg_class", column: :wildcard},
@@ -719,7 +723,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
 
   test "parsing wildcard as function argument" do
     query = "SELECT count(*) FROM test;"
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, [statement]} = parse_query(query)
     assert {:ok, request} = Parser.to_request(statement)
     assert request.select == [
       %Field{table: "test", column: :wildcard},
@@ -728,7 +732,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
 
   test "parsing arrays" do
     query = "SELECT ARRAY[a, b] FROM test;"
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, [statement]} = parse_query(query)
     assert {:ok, request} = Parser.to_request(statement)
     assert request.select == [
       %Field{table: "test", column: "b"},
@@ -738,7 +742,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
 
   test "parsing json access" do
     query = "SELECT data->>'region' FROM test;"
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, [statement]} = parse_query(query)
     assert {:ok, request} = Parser.to_request(statement)
     assert request.select == [
       %Field{table: "test", column: "data"},
@@ -747,7 +751,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
 
   test "parsing hstore access" do
     query = "SELECT a->'key' FROM test;"
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, [statement]} = parse_query(query)
     assert {:ok, request} = Parser.to_request(statement)
     assert request.select == [
       %Field{table: "test", column: "a"},
@@ -756,11 +760,11 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
 
   test "parsing ON CONFLICT statement" do
     query = """
-    INSERT INTO transactions(name, amount)
+    INSERT INTO transactions (name, amount)
     VALUES ('bob', '1234'), ('alice', '4321')
-    ON CONFLICT (name) DO NOTHING;
+    ON CONFLICT(name) DO NOTHING;
     """
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, [statement]} = parse_query(query)
     assert {:ok, request} = Parser.to_request(statement)
     assert request.select == [
       %Field{table: "transactions", column: "name"},
@@ -768,11 +772,11 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
 
     query = """
     INSERT INTO customers (name, email)
-    VALUES('Microsoft','hotline@microsoft.com')
-    ON CONFLICT (name)
+    VALUES ('Microsoft', 'hotline@microsoft.com')
+    ON CONFLICT(name)
     DO UPDATE SET email = EXCLUDED.email || ';' || customers.email;
     """
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, [statement]} = parse_query(query)
     assert {:ok, request} = Parser.to_request(statement)
     assert request.select == [
       %Field{table: "customers", column: "email"},
@@ -786,7 +790,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
 
   test "parsing SIMILAR TO statement" do
     query = "SELECT a SIMILAR TO '%' + b + '%' FROM test;"
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, [statement]} = parse_query(query)
     assert {:ok, request} = Parser.to_request(statement)
     assert request.select == [
       %Field{table: "test", column: "a"},
@@ -796,7 +800,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
 
   test "parsing composite access" do
     query = "SELECT (item).name FROM on_hand WHERE (item).price > 9.99;"
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, [statement]} = parse_query(query)
     assert {:ok, request} = Parser.to_request(statement)
     assert request.select == [
       %Field{table: "on_hand", column: "item"},
@@ -806,7 +810,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
 
   test "parsing OVERLAY statement" do
     query = "SELECT overlay(a placing b from 3) FROM test;"
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, [statement]} = parse_query(query)
     assert {:ok, request} = Parser.to_request(statement)
     assert request.select == [
       %Field{table: "test", column: "b"},
@@ -816,7 +820,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
 
   test "parsing of aggregates with filter" do
     query = "SELECT AVG(mark) FILTER (WHERE mark > 0) FROM scores;"
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, [statement]} = parse_query(query)
     assert {:ok, request} = Parser.to_request(statement)
     assert request.select == [
       %Field{table: "scores", column: "mark"},
@@ -828,7 +832,7 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     query = """
     SELECT * FROM weather JOIN cities ON city = name;
     """
-    assert {:ok, [statement]} = Parser.parse_postgresql(query)
+    assert {:ok, [statement]} = parse_query(query)
     assert {:ok, request} = Parser.to_request(statement)
     assert request.select == [
       %Field{table: "cities", column: :wildcard},
@@ -874,5 +878,44 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     assert %Insert{
       table_name: [%Ident{value: ^name}],
     } = statement
+  end
+
+  defp parse_query(query), do: parse_query(query, normalize(query))
+  defp parse_query(query, expected) do
+    # Test that the query is encoded/reencoded correctly
+    # refs are dropped in the result to make other tests simpler
+    case Parser.parse_postgresql(query) do
+      {:ok, result} ->
+        {statements, refs} = Enum.unzip(result)
+        reencoded = refs
+        |> Stream.map(fn ref ->
+          assert {:ok, sql} = Parser.to_sql(ref)
+          sql
+        end)
+        |> Enum.join("\n")
+
+        assert normalize(reencoded) == expected
+        {:ok, statements}
+
+      err -> err
+    end
+  end
+
+  defp normalize(text) do
+    text
+    |> String.downcase()
+    |> String.replace(~r/\s+/, " ")
+    |> String.replace(~r/cast\(([\w\._:']+) as ([\w\._]+)\)/, "\\1::\\2")
+    |> String.replace(~r/cast\(([\w\._:']+) as ([\w\._]+)\)/, "\\1::\\2")
+    |> String.replace("( ", "(")
+    |> String.replace(" )", ")")
+    |> String.replace(" as ", " ")
+    |> String.replace(" = ", "=")
+    |> String.replace(" -> ", "->")
+    |> String.replace(" ->> ", "->>")
+    |> String.replace("!=", "<>")
+    |> String.replace("inner join", "join")
+    |> String.trim()
+    |> String.trim(";")
   end
 end
