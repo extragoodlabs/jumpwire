@@ -1,0 +1,42 @@
+# configure a postgresql database
+manifests:
+  - id: 0779b97a-c04a-48f9-9483-22e8b0487de4
+    name: my local db
+    root_type: postgresql
+    credentials:
+      username: postgres
+      password: password
+    configuration:
+      type: postgresql
+      database: junpwire
+      hostname: host.docker.internal
+      ssl: false
+      port: 5432
+
+# set labels on fields
+proxy_schemas:
+  - id: f764dd5b-fb38-401a-b414-edfa8230fd11
+    name: users
+    # must match the ID set for PostgreSQL
+    manifest_id: 0779b97a-c04a-48f9-9483-22e8b0487de4
+    fields:
+      name: pii
+      address: pii
+      favorite_cheese: secret
+
+# create a client for the application connections
+client_auth:
+  - id: ccf334b5-2d5a-45ee-a6dd-c34caf99e4d4
+    name: psql
+    manifest_id: 0779b97a-c04a-48f9-9483-22e8b0487de4
+
+groups:
+  # Engineers will be able to do anything to data labeled
+  # `secret` but all operations involving other labels
+  # will be blocked
+  Engineers:
+    permissions:
+      - select:secret
+      - update:secret
+      - insert:secret
+      - delete:secret

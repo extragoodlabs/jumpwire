@@ -1,0 +1,51 @@
+version: "3.8"
+
+x-common-variables: &common-variables
+  POSTGRES_USER: postgres
+  POSTGRES_PASSWORD: password
+  POSTGRES_DB: junpwire
+
+services:
+  db-postgres:
+    image: postgres:14.5
+    container_name: db-postgres
+    healthcheck:
+      test: psql postgres --command "select 1" -U postgres
+      interval: 5s
+      timeout: 10s
+      retries: 120
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data/postgres-volume:/var/lib/postgresql/data
+    environment:
+      <<: *common-variables
+    networks:
+      - "jumpwire"
+
+  backend:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    container_name: jumpwire
+    environment:
+      JUMPWIRE_ENCRYPTION_KEY: "df4M7LYMgODjxmYccylqvtoolZzUSipwUfteqBjaBdE="
+      JUMPWIRE_ROOT_TOKEN: "Y1jhdxNJT6eGd6jofujl9MJeJc84XBiRpgIHPuY0Fgc="
+      JUMPWIRE_CONFIG_PATH: /etc/jumpwire
+      JUMPWIRE_POSTGRES_PROXY_PORT: 6432
+      JUMPWIRE_MYSQL_PROXY_PORT: 3307
+    depends_on:
+      - "db-postgres"
+    ports:
+      - "4004:4004"
+      - "4443:4443"
+      - "3307:3307"
+      - "6432:6432"
+    volumes:
+      - ./jumpwire.yaml:/etc/jumpwire/jumpwire.yaml
+    networks:
+      - "jumpwire"
+
+networks:
+  jumpwire:
+    name: jumpwire

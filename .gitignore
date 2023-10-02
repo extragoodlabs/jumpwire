@@ -51,3 +51,6 @@ gasket-*.tar
 # System specific dev configuration
 .iex.exs
 /config/*.secrets.exs
+
+# dev environment
+/data/
