@@ -13,6 +13,7 @@ defmodule JumpWire.Proxy.Request do
     field :delete, [Field.t()], default: []
     field :insert, [Field.t()], default: []
     field :upstream, JumpWire.Manifest.t(), enforce: false
+    field :source, any(), default: nil
   end
 
   def put_field(request, type, field) do

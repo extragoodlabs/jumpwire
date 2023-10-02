@@ -108,4 +108,16 @@ defmodule JumpWire.Proxy.Postgres.Messages do
     len = byte_size(body) + 4
     <<len::32, body::binary>>
   end
+
+  def query(:simple, data) do
+    # simple query
+    len = :erlang.iolist_size(data) + 5
+    [<<?Q, len::integer-32>>, data, 0]
+  end
+
+  def query({:parse, name, params}, data) do
+    # prepared statement, also called a Parse message
+    len = :erlang.iolist_size(name) + :erlang.iolist_size(data) + 8
+    [<<?P, len::integer-32>>, name, 0, data, 0, params]
+  end
 end
