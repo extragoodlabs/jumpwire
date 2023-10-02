@@ -8,7 +8,7 @@ manifests:
       password: password
     configuration:
       type: postgresql
-      database: junpwire
+      database: jumpwire
       hostname: host.docker.internal
       ssl: false
       port: 5432
