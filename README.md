@@ -5,17 +5,21 @@
 #### Identity Aware Database Gateway
 
 <!-- Nav header - Start -->
+
 [Home Page](https://jumpwire.io)
 ·
 [Documentation](https://docs.jumpwire.io)
 ·
 [Contact](#support-and-bug-reports)
+
 <!-- Nav header - END -->
 
 <!-- Badges - Start -->
+
 [![GitHub Release](https://img.shields.io/github/v/tag/extragoodlabs/jumpwire?style=flat-square&filter=*.*.*&label=Version)](https://github.com/extragoodlabs/jumpwire/pkgs/container/jumpwire)
 ![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/extragoodlabs/jumpwire/shipit.yaml?style=flat-square&label=CI)
 <a href="https://ycombinator.com"><img src="https://img.shields.io/website?color=%23f26522&down_message=Y%20Combinator&label=Backed&logo=ycombinator&style=flat-square&up_message=Y%20Combinator&url=https%3A%2F%2Fwww.ycombinator.com"></a>
+
 <!-- Badges - End -->
 </div>
 
@@ -36,7 +40,6 @@ Here are some examples of what JumpWire can do:
 - [Installation guides](#installation-guides)
 - [Configuration](#configuration)
 - [CLI](#cli)
-
 
 ## Features
 
@@ -69,6 +72,8 @@ When a client attempts to connect through the proxy without credentials, a magic
 ![DB Authorization Architecture](/images/DB%20Authorization%20Architecture.png)
 
 ## Quick Install
+
+### Using the Extragood Image
 
 JumpWire is packaged as a Docker image and doesn't have any hard dependencies (besides the database being proxied, of course). The image is hosted on [GitHub Packages](https://github.com/extragoodlabs/jumpwire/pkgs/container/jumpwire)
 
@@ -113,15 +118,15 @@ groups:
   # will be blocked
   Engineers:
     permissions:
-    - select:secret
-    - update:secret
-    - insert:secret
-    - delete:secret
+      - select:secret
+      - update:secret
+      - insert:secret
+      - delete:secret
 ```
 
 Start the JumpWire gateway:
 
-``` shell
+```shell
 export ENCRYPTION_KEY=$(openssl rand -base64 32)
 export JUMPWIRE_ROOT_TOKEN=$(openssl rand -base64 32)
 docker run -d --name jumpwire \
@@ -139,7 +144,7 @@ Setting proxy ports depends on whether there are other services running on the s
 
 If the gateway starts up correctly, the following message should be printed to the logs:
 
-``` text
+```text
 ************************************************************
 The JumpWire engine is up!
 
@@ -148,6 +153,34 @@ Check out our documentation at https://docs.jumpwire.io.
 Version: x.x.x
 ************************************************************
 ```
+
+### Docker
+
+We provide a bundle version of the proxy and a Postgres database using `docker-compose`. You can use your custom config or the one we provide.
+The `docker-compose.yaml` uses the local Dockerfile and will build a local instance from source. Use this for local development or to grab the
+latest local changes.
+
+By default the Postgres server is launched with the following params:
+
+| Param             | Value    | Description                       |
+| ----------------- | -------- | --------------------------------- |
+| POSTGRES_USER     | postgres | Default user for the db instance. |
+| POSTGRES_PASSWORD | password | Default password                  |
+| POSTGRES_DB       | jumpwire | Jumpwire proxy table              |
+
+When running `docker-compose` data for the Postgres is stored at `./data`.
+
+To start the containers run:
+
+```shell
+docker-compose up
+```
+
+```shell
+docker-compose down
+```
+
+Will bring down both running containers.
 
 JumpWire's CLI, [jwctl](https://github.com/extragoodlabs/jwctl), can be used to validate that the gateway is running.
 
@@ -226,51 +259,51 @@ The available configuration options are detailed in [our documentation](https://
 
 ### Environmental variables
 
-| Name | Default | Description |
-| --- | --- | --- |
-| JUMPWIRE_ENCRYPTION_KEY | - | Secret used for performing field level AES encryption |
-| JUMPWIRE_ROOT_TOKEN | - | Root token for the HTTP API. If not provided, a token will be automatically generated.
-| JUMPWIRE_TOKEN_KEY | value of JUMPWIRE_ROOT_TOKEN | Secret key used for signing and verifying tokenized data. |
-| LOG_LEVEL | info | Verbosity for logging. |
-| RELEASE_COOKIE | - | Shared secret used for distributed connectivity. Must be identical on all nodes in the cluster. |
-| JUMPWIRE_TOKEN | - | Token used to authenticate with the web interface. |
-| JUMPWIRE_FRONTEND | - | WebSocket URL to connect to when using a web controller |
-| JUMPWIRE_DOMAIN| localhost | Domain of the JumpWire gateway |
-| JUMPWIRE_HTTP_PORT | 4004 | Port to listen for HTTP request. |
-| JUMPWIRE_HTTPS_PORT | 4443 | Port to listen for HTTPS request. |
-| JUMPWIRE_PROMETHEUS_PORT | 9568 | Port to serve Prometheus stats on, under the `/metrics` endpoint. |
-| JUMPWIRE_POSTGRES_PROXY_PORT | 5432 | Port to listen for incoming postgres clients |
-| JUMPWIRE_MYSQL_PROXY_PORT | 3306 | Port to listen for incoming mysql clients. |
-| JUMPWIRE_TLS_CERT | - | Public cert to use for HTTPS |
-| JUMPWIRE_TLS_KEY | - | Private key to use for HTTPS |
-| JUMPWIRE_TLS_CA | [CAStore](https://github.com/elixir-mint/castore) | CA cert bundle to use for HTTPS |
-| JUMPWIRE_CONFIG_PATH | priv/config | Directory to load YAML config files from. |
-| VAULT_ADDR | http://localhost:8200 | URL of a HashiCorp Vault server to use for key management. |
-| VAULT_KV_VERSION | 2 | Whether to use version `1` or `2` of the Vault KV API. |
-| VAULT_KV_PATH | secret/jumpwire | Path in Vault to a KV store. The provided token/role should have write access to this. |
-| VAULT_DB_PATH | database | Mount point of database secrets in Vault. JumpWire will lookup databases and roles under this path for possible proxy credentials. |
-| VAULT_APPROLE_ID | - | ID of an approle to authenticate with Vault. Either a token or an approle must be provided to enable Vault. |
-| VAULT_APPROLE_SECRET | - | Secret of an approle to authenticate with Vault. Either a token or an approle must be provided to enable Vault. |
-| VAULT_TOKEN | - | Token to use to authenticate with Vault. Either a token or an approle must be provided to enable Vault. |
-| VAULT_NAMESPACE | - | Namespace to use with Vault Enterprise. |
-| JUMPWIRE_AWS_KMS_ENABLE | - | When set to `true` AWS KMS will be used for generating encryption keys. |
-| JUMPWIRE_AWS_KMS_KEY_NAME | jumpwire | A prefix to use for aliases when creating AWS KMS keys.|
-| HONEYBADGER_API_KEY | - | API key to enable error reporting to HoneyBadger. |
-| SENTRY_DSN | - | DSN to enable error reporting to Sentry. |
-| JUMPWIRE_ENV | prod | Environment to use in events for 3rd party error reporting. |
-| JUMPWIRE_PARSE_REQUESTS | true | When true, requests being proxied through JumpWire will be inspected and access policies will be applied. |
-| JUMPWIRE_PARSE_RESPONSES | true | When true, responses from requests proxied through JumpWire will be inspected and access policies will be applied. |
-| ACME_GENERATE_CERT | true | Enables issuance of a TLS certificate using ACME/letsencrypt. |
-| ACME_GENERATE_CERT_DELAY | 0 | How to long to wait after startup before attempting to issue a certificate, in seconds. |
-| ACME_CERT_DIRECTORY | priv/pki | Disk location to store ACME generated certificates. JumpWire must be able to write to this path. |
-| ACME_EMAIL | - | Email to use in CSRs. |
-| JUMPWIRE_SSO_METADATA_PATH | - | Path to an XML file containing metadata for the SSO IdP. |
-| JUMPWIRE_SSO_IDP | - | Identifier for the SSO IdP. This will be used in API paths. |
-| JUMPWIRE_SSO_SPID | jumpwire | When registering JumpWire as an SSO service provider, this ID will be used. |
-| JUMPWIRE_SSO_SIGNED_ENVELOPES | true | Whether to expect the SSO IdP to sign its SAML envelopes. |
-| JUMPWIRE_SSO_GROUPS_ATTRIBUTE | Group | Attribute on SAML assertions listing the groups a user is a member of. |
-| JUMPWIRE_SSO_BASE_URL | /sso | Explicitly set the base URL for SSO requests, including scheme and hostname. This is useful when running the gateway behind a load balancer that terminates TLS, to override the scheme of the host. |
-| JUMPWIRE_DISABLE_REPORTING | false | Disable reporting of anonymous usage analytics. |
+| Name                          | Default                                           | Description                                                                                                                                                                                          |
+| ----------------------------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| JUMPWIRE_ENCRYPTION_KEY       | -                                                 | Secret used for performing field level AES encryption                                                                                                                                                |
+| JUMPWIRE_ROOT_TOKEN           | -                                                 | Root token for the HTTP API. If not provided, a token will be automatically generated.                                                                                                               |
+| JUMPWIRE_TOKEN_KEY            | value of JUMPWIRE_ROOT_TOKEN                      | Secret key used for signing and verifying tokenized data.                                                                                                                                            |
+| LOG_LEVEL                     | info                                              | Verbosity for logging.                                                                                                                                                                               |
+| RELEASE_COOKIE                | -                                                 | Shared secret used for distributed connectivity. Must be identical on all nodes in the cluster.                                                                                                      |
+| JUMPWIRE_TOKEN                | -                                                 | Token used to authenticate with the web interface.                                                                                                                                                   |
+| JUMPWIRE_FRONTEND             | -                                                 | WebSocket URL to connect to when using a web controller                                                                                                                                              |
+| JUMPWIRE_DOMAIN               | localhost                                         | Domain of the JumpWire gateway                                                                                                                                                                       |
+| JUMPWIRE_HTTP_PORT            | 4004                                              | Port to listen for HTTP request.                                                                                                                                                                     |
+| JUMPWIRE_HTTPS_PORT           | 4443                                              | Port to listen for HTTPS request.                                                                                                                                                                    |
+| JUMPWIRE_PROMETHEUS_PORT      | 9568                                              | Port to serve Prometheus stats on, under the `/metrics` endpoint.                                                                                                                                    |
+| JUMPWIRE_POSTGRES_PROXY_PORT  | 5432                                              | Port to listen for incoming postgres clients                                                                                                                                                         |
+| JUMPWIRE_MYSQL_PROXY_PORT     | 3306                                              | Port to listen for incoming mysql clients.                                                                                                                                                           |
+| JUMPWIRE_TLS_CERT             | -                                                 | Public cert to use for HTTPS                                                                                                                                                                         |
+| JUMPWIRE_TLS_KEY              | -                                                 | Private key to use for HTTPS                                                                                                                                                                         |
+| JUMPWIRE_TLS_CA               | [CAStore](https://github.com/elixir-mint/castore) | CA cert bundle to use for HTTPS                                                                                                                                                                      |
+| JUMPWIRE_CONFIG_PATH          | priv/config                                       | Directory to load YAML config files from.                                                                                                                                                            |
+| VAULT_ADDR                    | http://localhost:8200                             | URL of a HashiCorp Vault server to use for key management.                                                                                                                                           |
+| VAULT_KV_VERSION              | 2                                                 | Whether to use version `1` or `2` of the Vault KV API.                                                                                                                                               |
+| VAULT_KV_PATH                 | secret/jumpwire                                   | Path in Vault to a KV store. The provided token/role should have write access to this.                                                                                                               |
+| VAULT_DB_PATH                 | database                                          | Mount point of database secrets in Vault. JumpWire will lookup databases and roles under this path for possible proxy credentials.                                                                   |
+| VAULT_APPROLE_ID              | -                                                 | ID of an approle to authenticate with Vault. Either a token or an approle must be provided to enable Vault.                                                                                          |
+| VAULT_APPROLE_SECRET          | -                                                 | Secret of an approle to authenticate with Vault. Either a token or an approle must be provided to enable Vault.                                                                                      |
+| VAULT_TOKEN                   | -                                                 | Token to use to authenticate with Vault. Either a token or an approle must be provided to enable Vault.                                                                                              |
+| VAULT_NAMESPACE               | -                                                 | Namespace to use with Vault Enterprise.                                                                                                                                                              |
+| JUMPWIRE_AWS_KMS_ENABLE       | -                                                 | When set to `true` AWS KMS will be used for generating encryption keys.                                                                                                                              |
+| JUMPWIRE_AWS_KMS_KEY_NAME     | jumpwire                                          | A prefix to use for aliases when creating AWS KMS keys.                                                                                                                                              |
+| HONEYBADGER_API_KEY           | -                                                 | API key to enable error reporting to HoneyBadger.                                                                                                                                                    |
+| SENTRY_DSN                    | -                                                 | DSN to enable error reporting to Sentry.                                                                                                                                                             |
+| JUMPWIRE_ENV                  | prod                                              | Environment to use in events for 3rd party error reporting.                                                                                                                                          |
+| JUMPWIRE_PARSE_REQUESTS       | true                                              | When true, requests being proxied through JumpWire will be inspected and access policies will be applied.                                                                                            |
+| JUMPWIRE_PARSE_RESPONSES      | true                                              | When true, responses from requests proxied through JumpWire will be inspected and access policies will be applied.                                                                                   |
+| ACME_GENERATE_CERT            | true                                              | Enables issuance of a TLS certificate using ACME/letsencrypt.                                                                                                                                        |
+| ACME_GENERATE_CERT_DELAY      | 0                                                 | How to long to wait after startup before attempting to issue a certificate, in seconds.                                                                                                              |
+| ACME_CERT_DIRECTORY           | priv/pki                                          | Disk location to store ACME generated certificates. JumpWire must be able to write to this path.                                                                                                     |
+| ACME_EMAIL                    | -                                                 | Email to use in CSRs.                                                                                                                                                                                |
+| JUMPWIRE_SSO_METADATA_PATH    | -                                                 | Path to an XML file containing metadata for the SSO IdP.                                                                                                                                             |
+| JUMPWIRE_SSO_IDP              | -                                                 | Identifier for the SSO IdP. This will be used in API paths.                                                                                                                                          |
+| JUMPWIRE_SSO_SPID             | jumpwire                                          | When registering JumpWire as an SSO service provider, this ID will be used.                                                                                                                          |
+| JUMPWIRE_SSO_SIGNED_ENVELOPES | true                                              | Whether to expect the SSO IdP to sign its SAML envelopes.                                                                                                                                            |
+| JUMPWIRE_SSO_GROUPS_ATTRIBUTE | Group                                             | Attribute on SAML assertions listing the groups a user is a member of.                                                                                                                               |
+| JUMPWIRE_SSO_BASE_URL         | /sso                                              | Explicitly set the base URL for SSO requests, including scheme and hostname. This is useful when running the gateway behind a load balancer that terminates TLS, to override the scheme of the host. |
+| JUMPWIRE_DISABLE_REPORTING    | false                                             | Disable reporting of anonymous usage analytics.                                                                                                                                                      |
 
 ### Encryption keys
 
