@@ -179,7 +179,7 @@ defmodule JumpWire.Proxy.Postgres do
     # another TCP packet
     if byte_size(rest) > query_size do
       <<query::binary-size(query_size), 0, _other::binary>> = rest
-      parse_client_query(query, data, state)
+      parse_client_query(:simple, query, data, state)
     else
       :ok = Database.socket_active(state.client_socket)
       {:noreply, %{state | client_buffer: data}, @timeout}
@@ -198,16 +198,17 @@ defmodule JumpWire.Proxy.Postgres do
     # any smaller and part of the query is missing - likely coming in
     # another TCP packet
     if byte_size(rest) > query_size do
-      <<query::binary-size(query_size), 0, _num_params::integer-16, _other::binary>> = rest
+      <<query::binary-size(query_size), 0, params::binary>> = rest
 
-    # the query is the name of the prepared statement followed by the query.
-    [_prepared_statement_name, query] = :binary.split(query, <<0>>)
+      # the query is the name of the prepared statement followed by the query.
+      [prepared_statement_name, query] = :binary.split(query, <<0>>)
+      query_info = {:parse, prepared_statement_name, params}
 
-    # TODO: parse the prepared statement if it exists
-    # TODO: parse params based on num_params
-    # TODO: recursively handle the remaining data
+      # TODO: parse the prepared statement if it exists
+      # TODO: parse params based on num_params
+      # TODO: recursively handle the remaining data
 
-      parse_client_query(query, data, state)
+      parse_client_query(query_info, query, data, state)
     else
       :ok = Database.socket_active(state.client_socket)
       {:noreply, %{state | client_buffer: data}, @timeout}
@@ -327,18 +328,21 @@ defmodule JumpWire.Proxy.Postgres do
   end
 
   defp query_statements_to_requests(statements) do
-    Enum.reduce_while(statements, {:ok, []}, fn statement, {_, requests} ->
+    Enum.reduce_while(statements, {:ok, []}, fn {statement, ref}, {_, requests} ->
       case Parser.to_request(statement) do
-        {:ok, request} -> {:cont, {:ok, [request | requests]}}
+        {:ok, request} ->
+          request = %{request | source: ref}
+          {:cont, {:ok, [request | requests]}}
+
         _ -> {:halt, :error}
       end
     end)
   end
 
-  defp parse_client_query(query, data, state = %{flags: %{parse_requests: true}}) do
+  defp parse_client_query(query_info, query, data, state = %{flags: %{parse_requests: true}}) do
     with {:ok, statements} <- Parser.parse_postgresql(query),
          {:ok, requests} <- query_statements_to_requests(statements) do
-      handle_client_query(requests, statements, data, state)
+      handle_client_query(requests, query_info, state)
     else
       err ->
         Logger.warn("Unable to parse PostgreSQL statement: #{inspect err}")
@@ -347,7 +351,7 @@ defmodule JumpWire.Proxy.Postgres do
         {:noreply, state}
     end
   end
-  defp parse_client_query(_query, data, state) do
+  defp parse_client_query(_query_info, _query, data, state) do
     :ok = Database.msg_send(state.db_socket, data)
     :ok = Database.socket_active(state.client_socket)
     {:noreply, state}
@@ -355,22 +359,17 @@ defmodule JumpWire.Proxy.Postgres do
 
   @spec handle_client_query(
     [JumpWire.Proxy.Request.t()],
-    [JumpWire.Proxy.SQL.Statement.Query.t()],
-    binary(),
+    :simple | {:parse, binary(), binary()},
     Database.state()
-  )
-  :: {:noreply, Database.state()}
-  def handle_client_query(requests, _statements, data, state) do
-    result =
-      Enum.reduce_while(requests, {:ok, data}, fn req, _acc ->
-        case apply_request_policies(req, data, state) do
-          {:ok, _request, data} -> {:cont, {:ok, data}}
-          err -> {:halt, err}
-        end
-      end)
+  ) :: {:noreply, Database.state()}
+  def handle_client_query(requests, query_info, state) do
+    result = Enum.reduce_while(requests, {:ok, []}, fn req, {:ok, acc} ->
+      _handle_request(req, acc, state)
+    end)
 
     case result do
-      {:ok, data} ->
+      {:ok, iolist} ->
+        data = Messages.query(query_info, iolist)
         :ok = Database.msg_send(state.db_socket, data)
         :ok = Database.socket_active(state.client_socket)
         {:noreply, state}
@@ -379,6 +378,18 @@ defmodule JumpWire.Proxy.Postgres do
         Database.msg_send(state.client_socket, err)
         :ok = Database.socket_active(state.client_socket)
         {:noreply, state}
+    end
+  end
+
+  defp _handle_request(request, acc, state) do
+    case apply_request_policies(request, state) do
+      {:ok, _request, ref} ->
+        case Parser.to_sql(ref) do
+          {:ok, sql} -> {:cont, {:ok, [acc, sql]}}
+          err -> {:halt, err}
+        end
+
+      err -> {:halt, err}
     end
   end
 
@@ -643,9 +654,9 @@ defmodule JumpWire.Proxy.Postgres do
   to access labeled data but may or may not have any new data set in
   the request.
   """
-  @spec apply_request_policies(JumpWire.Proxy.Request.t(), binary(), Database.state())
+  @spec apply_request_policies(JumpWire.Proxy.Request.t(), Database.state())
   :: {:ok, JumpWire.Proxy.Request.t(), binary()} | {:error, binary()}
-  def apply_request_policies(request, data, state) do
+  def apply_request_policies(request, state) do
     policies = JumpWire.Policy.list_all(state.organization_id)
     record = request_to_record(request, state)
 
@@ -657,9 +668,8 @@ defmodule JumpWire.Proxy.Postgres do
         Logger.error("Error applying policy: #{inspect err}")
         {:error, [Messages.policy_error(err), Messages.ready_for_query()]}
 
-      %Record{data: _data} ->
+      %Record{source_data: data} ->
         JumpWire.Events.database_accessed(record.attributes, state.metadata)
-        # NB: any transformations of the data will not be applied
         {:ok, request, data}
     end
   end
@@ -679,6 +689,7 @@ defmodule JumpWire.Proxy.Postgres do
       data: %{},
       labels: %{},
       source: "postgres",
+      source_data: request.source,
       label_format: :key,
     }
     |> merge_request_field_labels(request.select, :select, schemas, default_namespace)
@@ -687,11 +698,12 @@ defmodule JumpWire.Proxy.Postgres do
     |> merge_request_field_labels(request.insert, :insert, schemas, default_namespace)
   end
 
-  defp request_to_record(_request, _state) do
+  defp request_to_record(request, _state) do
     %Record{
       data: %{},
       labels: %{},
       source: "postgres",
+      source_data: request.source,
       label_format: :key,
     }
   end

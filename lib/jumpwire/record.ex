@@ -11,6 +11,7 @@ defmodule JumpWire.Record do
   typed_embedded_schema null: false, enforce: true do
     field :data, Ecto.Any
     field :source, :string
+    field :source_data, Ecto.Any, enforce: false
     field :labels, {:map, {:array, :string}}, default: %{}
     field :label_format, Ecto.Enum, values: [:jsonp, :key], default: :jsonp
     field :policies, {:map, {:array, :string}}, default: %{}
