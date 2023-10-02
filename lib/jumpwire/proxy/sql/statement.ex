@@ -119,6 +119,7 @@ defmodule JumpWire.Proxy.SQL.Statement do
     field :args, [Statement.function_arg()] | nil
     field :with_hints, [Statement.expr()]
     field :version, Statement.table_version() | nil
+    field :partitions, [Statement.Ident.t()]
   end
 
   @type table_version() :: {:for_system_time_as_of, expr()}
