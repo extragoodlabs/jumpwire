@@ -156,7 +156,7 @@ Version: x.x.x
 
 ### Docker
 
-We provide a bundle version of the proxy and a Postgres database using `docker-compose`. You can use your custom config or the one we provide.
+We provide a bundled version of the proxy and a Postgres database using `docker-compose`. You can use your custom config or the one we provide.
 The `docker-compose.yaml` uses the local Dockerfile and will build a local instance from source. Use this for local development or to grab the
 latest local changes.
 
