@@ -14,7 +14,7 @@ Before starting a dev environment for the first time, you must generate local se
 
 [Pebble](https://github.com/letsencrypt/pebble/) is used as local ACME server for generating TLS certificates. It requires golang and can be setup with `mix local.pebble`.
 
-JumpWire can be started from the source code with `iex -S mix`. This will use the `dev` environment and start a REPL shell for interacting with the BEAM. You can skip
+JumpWire can be started from the source code with `iex -S mix`. This will use the `dev` environment and start a REPL shell for interacting with the BEAM.
 
 ## Testing
 
