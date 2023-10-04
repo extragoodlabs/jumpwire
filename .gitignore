@@ -37,6 +37,7 @@ gasket-*.tar
 /jumpwire_credentials/
 
 .env.aws
+.env
 
 /*.fprof
 /*.cgrind

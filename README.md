@@ -170,6 +170,19 @@ By default the Postgres server is launched with the following params:
 
 When running `docker-compose` data for the Postgres is stored at `./data`.
 
+Before starting the containers using `docker-compose` you need to add a local `.env` to the base directory and add two variables:
+
+```shell
+JUMPWIRE_ENCRYPTION_KEY=<value>
+JUMPWIRE_ROOT_TOKEN=<value>
+```
+
+The easiest way to generate these values is by running the following `openssl` command and moving the values into your `.env`
+
+```shell
+$(openssl rand -base64 32)
+```
+
 To start the containers run:
 
 ```shell
