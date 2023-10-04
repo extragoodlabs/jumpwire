@@ -73,7 +73,7 @@ When a client attempts to connect through the proxy without credentials, a magic
 
 ## Quick Install
 
-### Using the Extragood Image
+### Using the Docker Image
 
 JumpWire is packaged as a Docker image and doesn't have any hard dependencies (besides the database being proxied, of course). The image is hosted on [GitHub Packages](https://github.com/extragoodlabs/jumpwire/pkgs/container/jumpwire)
 
