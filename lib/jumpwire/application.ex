@@ -172,13 +172,14 @@ defmodule JumpWire.Application do
       JumpWire.Telemetry,
 
       JumpWire.Router.Supervisor,
+      JumpWire.Proxy.BigQuery.Supervisor,
       {JumpWire.Proxy.Postgres, {pg_proxy_opts, proxy_args}},
       {JumpWire.Proxy.MySQL, {mysql_proxy_opts, proxy_args}},
 
       {Cluster.Supervisor, [topologies, [name: JumpWire.ClusterSupervisor]]},
 
       # Local ACME server
-      JumpWire.ACME.Pebble,
+      # JumpWire.ACME.Pebble,
     ]
 
     opts = [strategy: :one_for_one, name: JumpWire.Application]
