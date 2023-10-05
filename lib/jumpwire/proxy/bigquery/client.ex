@@ -6,6 +6,7 @@ defmodule JumpWire.Proxy.BigQuery.Client do
     filter_headers: ["authorization"]
 
   plug Tesla.Middleware.JSON
+  plug Tesla.Middleware.Compression
 
   def query(method, bq_url, body, headers) do
     encoded_body =

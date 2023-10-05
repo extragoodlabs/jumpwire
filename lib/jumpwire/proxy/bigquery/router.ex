@@ -75,7 +75,7 @@ defmodule JumpWire.Proxy.BigQuery.Router do
   defp bq_headers(%{req_headers: headers}) do
     without_host =
       headers
-      |> Stream.reject(fn {k, _} -> Enum.member?(["host", "content-length", "accept-encoding", "accept"], k) end)
+      |> Stream.reject(fn {k, _} -> Enum.member?(["host", "content-length", "accept"], k) end)
       |> Enum.to_list()
 
     [{"host", "bigquery.googleapis.com"}, {"accept", "application/json"} | without_host]
