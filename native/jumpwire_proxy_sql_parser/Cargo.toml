@@ -11,6 +11,6 @@ crate-type = ["cdylib"]
 
 [dependencies]
 rustler = "0.27.0"
-sqlparser = { version = "0.38.0", features = ["serde"] }
+sqlparser = { version = "0.38.0", features = ["serde", "visitor"] }
 serde = "1.0"
 serde_rustler = { git = "https://github.com/jumpwire-ai/serde_rustler" }
