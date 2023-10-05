@@ -98,6 +98,9 @@ defmodule JumpWire.Proxy.Postgres.Messages do
   end
 
   def startup_message(params) do
+    # Filter out any params that are JumpWire specific
+    params = params |> Stream.reject(fn {key, _} -> String.starts_with?(key, "jw_") end)
+
     version = <<196_608::32>>
     body = params
     |> Stream.map(fn {key, value} ->

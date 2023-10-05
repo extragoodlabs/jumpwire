@@ -1,8 +1,12 @@
-use rustler::{Atom, Binary, Env, NifUnitEnum, ResourceArc, Term};
+use rustler::{Atom, Binary, Env, Error, NifResult, NifUnitEnum, ResourceArc, Term};
 use serde_rustler::prefixed_to_term;
-use sqlparser::ast::Statement;
+use sqlparser::ast::{
+    visit_statements_mut, BinaryOperator, Expr, Ident, ObjectName, SetExpr, Statement, TableFactor,
+    Value,
+};
 use sqlparser::dialect::{GenericDialect, MySqlDialect, PostgreSqlDialect};
 use sqlparser::parser::{Parser, ParserError};
+use std::ops::ControlFlow;
 use std::sync::Mutex;
 
 mod atoms {
@@ -12,7 +16,15 @@ mod atoms {
         tokenizer_error,
         parser_error,
         recursion_limit_exceeded,
+        mutex_locked,
     }
+}
+
+#[derive(NifUnitEnum)]
+enum BinaryOp {
+    Eq,
+    Gt,
+    Lt,
 }
 
 #[derive(NifUnitEnum)]
@@ -81,10 +93,83 @@ struct StatementResource {
 }
 
 #[rustler::nif]
-fn to_sql(resource: ResourceArc<StatementResource>) -> Result<String, (Atom, String)> {
-    let statement = resource.statement.try_lock().unwrap();
+fn to_sql(resource: ResourceArc<StatementResource>) -> NifResult<(Atom, String)> {
+    let statement = resource
+        .statement
+        .try_lock()
+        .map_err(|_| Error::Atom("mutex_lock_failure"))?;
     let sql = format!("{}", statement);
-    Ok(sql)
+    Ok((atoms::ok(), sql))
+}
+
+#[rustler::nif]
+fn add_table_selection<'a>(
+    resource: ResourceArc<StatementResource>,
+    table: String,
+    left: String,
+    op: BinaryOp,
+    right: String,
+) -> NifResult<Atom> {
+    let left = Expr::Identifier(Ident {
+        value: left,
+        quote_style: None,
+    });
+    let right = Expr::Value(Value::SingleQuotedString(right));
+    let selection = match op {
+        BinaryOp::Eq => Expr::BinaryOp {
+            left: Box::new(left),
+            op: BinaryOperator::Eq,
+            right: Box::new(right),
+        },
+        _ => return Err(Error::Atom("unknown_operator")),
+    };
+
+    let mut statement = resource
+        .statement
+        .try_lock()
+        .map_err(|_| Error::Atom("mutex_lock_failure"))?;
+
+    let table_ident = vec![table];
+
+    // find all selections, create a where clause or modify it if possible
+    // TODO: recurse inner statements
+    // TODO: check joins on tables
+    // TODO: handle other statements besides Query
+    // TODO: better matching for the Ident, allow table name to have a specified namespace
+    visit_statements_mut(&mut *statement, |stmt| {
+        match stmt {
+            Statement::Query(ref mut query) => match *query.body {
+                SetExpr::Select(ref mut select) => {
+                    let table_match = select.from.iter().any(|table| match &table.relation {
+                        TableFactor::Table {
+                            name: ObjectName(name),
+                            ..
+                        } => {
+                            let ident: Vec<String> = name.iter().map(|i| i.value.clone()).collect();
+
+                            ident == table_ident
+                        }
+                        _ => false,
+                    });
+                    if table_match {
+                        select.selection = match &select.selection {
+                            None => Some(selection.clone()),
+                            Some(existing) => Some(Expr::BinaryOp {
+                                op: BinaryOperator::And,
+                                left: Box::new(existing.clone()),
+                                right: Box::new(selection.clone()),
+                            }),
+                        };
+                    }
+                }
+                _ => (),
+            },
+            _ => (),
+        };
+
+        ControlFlow::<()>::Continue(())
+    });
+    Ok(atoms::ok())
 }
 
 fn parse(sql: &str) -> Result<Vec<Statement>, ParserError> {
@@ -99,6 +184,6 @@ fn load(env: Env, _: Term) -> bool {
 
 rustler::init!(
     "Elixir.JumpWire.Proxy.SQL.Parser",
-    [parse_postgresql, debug_parse, to_sql],
+    [parse_postgresql, debug_parse, to_sql, add_table_selection],
     load = load
 );

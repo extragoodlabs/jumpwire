@@ -67,6 +67,7 @@ defmodule JumpWire.Proxy.SQL.Parser do
   def parse_postgresql(_query), do: :erlang.nif_error(:nif_not_loaded)
   def debug_parse(_query, _dialect), do: :erlang.nif_error(:nif_not_loaded)
   def to_sql(_query), do: :erlang.nif_error(:nif_not_loaded)
+  def add_table_selection(_ref, _table, _left, _op, _right), do: :erlang.nif_error(:nif_not_loaded)
 
   @doc """
   In PostgreSQL, system tables names always being with `pg_`. Unqualified references will
