@@ -402,6 +402,14 @@ defmodule JumpWire.Proxy.Postgres do
     |> Stream.map(fn [key, _, value, _] ->
       {:binary.list_to_bin(key), :binary.list_to_bin(value)}
     end)
+    |> Stream.flat_map(fn
+      {"user", value} ->
+        case String.split(value, "#", parts: 2) do
+          [user, jw_id] -> [{"user", user}, {"jw_id", jw_id}]
+          _ -> [{"user", value}]
+        end
+      x -> [x]
+    end)
     |> Map.new()
   end
 
