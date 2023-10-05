@@ -837,6 +837,36 @@ defmodule JumpWire.Proxy.PostgresTest do
       )
   end
 
+  test "applying request filter policy", %{
+    conn: conn, params: params, org_id: org_id, manifest: manifest, schema: schema, table: table
+  } do
+    JumpWire.GlobalConfig.set(:policies, org_id, [])
+    assert :ok == Setup.enable_database(manifest)
+    assert :ok == Setup.enable_table(manifest, schema)
+    rows = insert_fake_rows(conn, table)
+    value = rows |> Stream.map(fn [v, _] -> v end) |> Enum.find(fn v -> not is_nil(v) end)
+
+    policy = %JumpWire.Policy{
+      version: 2,
+      id: Uniq.UUID.uuid4(),
+      handling: :filter_request,
+      label: "secret",
+      organization_id: org_id,
+      apply_on_match: true,
+      attributes: [MapSet.new(["*"])],
+      configuration: %JumpWire.Policy.FilterRequest{table: table, field: "value"},
+    }
+    key = {org_id, policy.id}
+
+    on_exit fn -> JumpWire.GlobalConfig.delete(:policies, key) end
+    JumpWire.GlobalConfig.put(:policies, key, policy)
+
+    params = Keyword.put(params, :parameters, [jw_id: value])
+    {:ok, pid} = Postgrex.start_link(params)
+    assert {:ok, %{rows: [row]}} = Postgrex.query(pid, "SELECT value, phone FROM #{table}", [])
+    assert Enum.member?(rows, row)
+  end
+
   defp insert_fake_rows(conn, table) do
     rows = [
       [Faker.Gov.Us.ssn, Faker.Phone.EnUs.phone],

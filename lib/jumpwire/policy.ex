@@ -29,7 +29,8 @@ defmodule JumpWire.Policy do
     field :name, :string
     field :attributes, {:array, Ecto.MapSet}, default: []
     field :apply_on_match, :boolean, default: false
-    field :handling, Ecto.Enum, values: [:access, :block, :drop_field, :encrypt, :tokenize, :resolve_fields]
+    field :handling, Ecto.Enum,
+      values: [:access, :block, :drop_field, :encrypt, :tokenize, :resolve_fields, :filter_request]
     field :label, :string
     field :allowed_classification, :string
     field :encryption_key, Ecto.Atom, default: :aes
@@ -37,7 +38,10 @@ defmodule JumpWire.Policy do
     field :client_id, :string
 
     polymorphic_embeds_one :configuration,
-      types: [resolve_fields: JumpWire.Policy.ResolveFields],
+      types: [
+        resolve_fields: Policy.ResolveFields,
+        filter_request: Policy.FilterRequest
+      ],
       on_replace: :update,
       on_type_not_found: :changeset_error,
       type_field: :type
@@ -88,7 +92,7 @@ defmodule JumpWire.Policy do
   end
   def hook(_, _), do: Task.completed(:ok)
 
-  @action_order Enum.with_index([:access, :block, :drop_field, :resolve_fields, :encrypt, :tokenize])
+  @action_order Enum.with_index([:access, :block, :filter_request, :drop_field, :resolve_fields, :encrypt, :tokenize])
   @doc """
   List all known policies for a given org. Policies are ordered based on the handling action.
   """
@@ -265,6 +269,7 @@ defmodule JumpWire.Policy do
         :tokenize -> Policy.Tokenize
         :detokenize -> Policy.Detokenize
         :resolve_fields -> Policy.ResolveFields
+        :filter_request -> Policy.FilterRequest
         _ ->
           Logger.error("Policy handling #{handling} not implemented")
           nil

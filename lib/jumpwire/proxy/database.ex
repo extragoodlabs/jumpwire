@@ -299,6 +299,7 @@ defmodule JumpWire.Proxy.Database do
       type: :db_proxy,
       classification: client.classification,
       attributes: attributes,
+      params: state.startup_params,
     })
 
     JumpWire.Policy.apply_policies(policies, record, info)
