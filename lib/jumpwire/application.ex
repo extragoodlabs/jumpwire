@@ -179,7 +179,7 @@ defmodule JumpWire.Application do
       {Cluster.Supervisor, [topologies, [name: JumpWire.ClusterSupervisor]]},
 
       # Local ACME server
-      # JumpWire.ACME.Pebble,
+      JumpWire.ACME.Pebble,
     ]
 
     opts = [strategy: :one_for_one, name: JumpWire.Application]
