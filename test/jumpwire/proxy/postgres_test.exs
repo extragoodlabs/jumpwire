@@ -861,7 +861,9 @@ defmodule JumpWire.Proxy.PostgresTest do
     on_exit fn -> JumpWire.GlobalConfig.delete(:policies, key) end
     JumpWire.GlobalConfig.put(:policies, key, policy)
 
-    params = Keyword.put(params, :parameters, [jw_id: value])
+    params = Keyword.update!(params, :username, fn username ->
+      "#{username}##{value}"
+    end)
     {:ok, pid} = Postgrex.start_link(params)
     assert {:ok, %{rows: [row]}} = Postgrex.query(pid, "SELECT value, phone FROM #{table}", [])
     assert Enum.member?(rows, row)
