@@ -1,4 +1,8 @@
 defmodule JumpWire.Proxy.BigQuery.Client do
+  @moduledoc """
+  Client for wrapping proxied requests to BigQuery
+  """
+
   use Tesla
   require Logger
 
@@ -10,9 +14,10 @@ defmodule JumpWire.Proxy.BigQuery.Client do
 
   def query(method, bq_url, body, headers) do
     encoded_body =
-      cond do
-        map_size(body) == 0 -> nil
-        true -> Jason.encode!(body)
+      if map_size(body) == 0 do
+        nil
+      else
+        Jason.encode!(body)
       end
 
     request(
