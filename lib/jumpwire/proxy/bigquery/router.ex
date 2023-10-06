@@ -12,7 +12,7 @@ defmodule JumpWire.Proxy.BigQuery.Router do
   end
 
   plug :match
-  plug:fetch_query_params
+  plug :fetch_query_params
 
   plug Plug.Parsers,
     parsers: [{:json, json_decoder: Jason}],
@@ -207,7 +207,7 @@ defmodule JumpWire.Proxy.BigQuery.Router do
     %JumpWire.Record{
       data: %{},
       labels: %{},
-      source: "postgres",
+      source: "bigquery",
       source_data: request.source,
       label_format: :key
     }
@@ -255,7 +255,7 @@ defmodule JumpWire.Proxy.BigQuery.Router do
         case Enum.find(fields, fn %{column: name} -> name == col end) do
           nil ->
             Logger.debug(
-              "Could not find colummn #{col} in postgres schema for table #{namespace}.#{table}"
+              "Could not find colummn #{col} in bigquery schema for table #{namespace}.#{table}"
             )
 
             []
@@ -266,7 +266,7 @@ defmodule JumpWire.Proxy.BigQuery.Router do
 
       _ ->
         Logger.debug(
-          "No schema stored for postgres table #{namespace}.#{table}, skipping field mapping"
+          "No schema stored for bigquery table #{namespace}.#{table}, skipping field mapping"
         )
 
         []
