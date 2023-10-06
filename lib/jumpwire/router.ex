@@ -40,6 +40,7 @@ defmodule JumpWire.Router do
     |> send_resp(200, Jason.encode!(%{message: "Welcome to JumpWire"}))
   end
 
+  forward "/bigquery", to: JumpWire.Proxy.BigQuery.Router
   forward "/sso", to: JumpWire.SSO.Router
   forward "/tokens", to: JumpWire.Token.Router
   forward "/api/v1", to: JumpWire.API.Router

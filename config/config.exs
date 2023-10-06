@@ -67,6 +67,9 @@ config :jumpwire, JumpWire.Proxy.Postgres,
 config :jumpwire, JumpWire.Proxy.MySQL,
   port: 3306,
   pool_size: 4
+config :jumpwire, JumpWire.Proxy.BigQuery,
+  https: [port: 5043],
+  http: [port: 5005]
 
 config :sentry,
   included_environments: [:staging, :prod],
