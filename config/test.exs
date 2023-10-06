@@ -12,7 +12,9 @@ config :logger,
 
 config :tesla, adapter: JumpWire.TeslaMock
 
-config :jumpwire, JumpWire.Router, http: [port: 4003]
+config :jumpwire, JumpWire.Router,
+  http: [port: 4003],
+  https: [port: 4444]
 config :jumpwire, JumpWire.Proxy.Postgres, port: 6544
 config :jumpwire, JumpWire.Proxy.MySQL, port: 3308
 config :jumpwire, JumpWire.Proxy.MySQLTest, port: 3306
