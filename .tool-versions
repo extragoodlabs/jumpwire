@@ -1,2 +1,4 @@
 erlang 25.3.2
 elixir 1.14.5-otp-25
+rust 1.72.1
+golang 1.19.2
