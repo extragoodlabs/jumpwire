@@ -37,6 +37,7 @@ gasket-*.tar
 /jumpwire_credentials/
 
 .env.aws
+.env
 
 /*.fprof
 /*.cgrind
@@ -51,3 +52,6 @@ gasket-*.tar
 # System specific dev configuration
 .iex.exs
 /config/*.secrets.exs
+
+# dev environment
+/data/
