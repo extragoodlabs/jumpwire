@@ -11,6 +11,4 @@ defmodule JumpWire.API.AuthPipeline do
   plug(Guardian.Plug.EnsureAuthenticated)
   plug(Guardian.Plug.LoadResource)
   plug(JumpWire.API.AuthorizationPlug)
-
-  @behaviour JumpWire.API.AuthPipeline.Behaviour
 end
