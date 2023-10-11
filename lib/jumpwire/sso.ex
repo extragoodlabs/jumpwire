@@ -1,4 +1,6 @@
 defmodule JumpWire.SSO do
+  @behaviour JumpWire.SSOBehaviour
+
   @moduledoc """
   Helpers for working with SSO authentication and authorization.
   """

@@ -10,6 +10,8 @@ defmodule JumpWire.API.Router do
   import JumpWire.Router.Helpers
   require Logger
 
+  @sso_module Application.fetch_env!(:jumpwire, JumpWire.SSO)
+
   plug(:match)
   plug(:put_secret_key_base)
 
@@ -51,7 +53,7 @@ defmodule JumpWire.API.Router do
   get "/manifests" do
     type = Map.get(conn.query_params, "type")
 
-    case JumpWire.SSO.fetch_active_assertion(conn) do
+    case @sso_module.fetch_active_assertion(conn) do
       {:ok, assertion} ->
         body =
           if type do
@@ -64,13 +66,14 @@ defmodule JumpWire.API.Router do
 
         send_json_resp(conn, 200, body)
 
-      _ ->
+      other ->
+        IO.puts("Failed to fetch active assertion: #{inspect(other)}")
         send_json_resp(conn, 401, %{error: "SSO login required"})
     end
   end
 
   put "/manifests" do
-    with {:ok, assertion} <- JumpWire.SSO.fetch_active_assertion(conn),
+    with {:ok, assertion} <- @sso_module.fetch_active_assertion(conn),
          uuid <- UUID.uuid4(),
          {:ok, manifest} <-
            conn.body_params
@@ -96,7 +99,7 @@ defmodule JumpWire.API.Router do
   get "/manifests/:id" do
     id = String.downcase(id)
 
-    with {:ok, assertion} <- JumpWire.SSO.fetch_active_assertion(conn),
+    with {:ok, assertion} <- @sso_module.fetch_active_assertion(conn),
          {:ok, manifest} <- JumpWire.Manifest.fetch(assertion.computed.org_id, id) do
       send_json_resp(conn, 200, manifest)
     else
@@ -111,21 +114,20 @@ defmodule JumpWire.API.Router do
   delete "manifests/:id" do
     id = String.downcase(id)
 
-    with {:ok, assertion} <- JumpWire.SSO.fetch_active_assertion(conn),
+    with {:ok, assertion} <- @sso_module.fetch_active_assertion(conn),
          _ <- JumpWire.Manifest.delete(assertion.computed.org_id, id) do
       send_json_resp(conn, 200, %{message: "Manifest deleted"})
     else
       :error ->
         send_json_resp(conn, 401, %{error: "SSO login required"})
 
-      other ->
-        Logger.error("Failed to delete manifest: #{inspect(other)}")
+      _ ->
         send_json_resp(conn, 404, %{error: "Manifest not found"})
     end
   end
 
   get "/auth/:token" do
-    with {:ok, assertion} <- JumpWire.SSO.fetch_active_assertion(conn),
+    with {:ok, assertion} <- @sso_module.fetch_active_assertion(conn),
          {:ok, {_nonce, type}} <- Token.verify_jit_auth_request(token) do
       body =
         JumpWire.Manifest.get_by_type(assertion.computed.org_id, type)
@@ -141,11 +143,11 @@ defmodule JumpWire.API.Router do
 
   put "/auth/:token" do
     with {:ok, manifest_id} <- Map.fetch(conn.body_params, "manifest_id"),
-         {:ok, assertion} <- JumpWire.SSO.fetch_active_assertion(conn),
+         {:ok, assertion} <- @sso_module.fetch_active_assertion(conn),
          org_id <- assertion.computed.org_id,
          {:ok, {nonce, type}} <- Token.verify_jit_auth_request(token),
          {:ok, %{root_type: ^type}} <- JumpWire.Manifest.fetch(org_id, manifest_id),
-         {:ok, client} <- JumpWire.SSO.create_client(assertion, nonce, manifest_id) do
+         {:ok, client} <- @sso_module.create_client(assertion, nonce, manifest_id) do
       JumpWire.PubSub.broadcast("*", {:client_authenticated, org_id, manifest_id, nonce, client})
 
       body = %{message: "Authentication request approved!", client_id: client.id}

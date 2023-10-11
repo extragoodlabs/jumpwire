@@ -91,6 +91,17 @@ defmodule JumpWire.ETS do
         DeltaCrdt.delete(@crdt, {table, id})
       end
 
+      @doc """
+      Delete all items from the given table.
+      """
+      def delete_all(table) do
+        # Drop all items from the CRDT
+        drop_all_crdt_items(table)
+
+        # Delete all items from the ETS table
+        :ets.delete_all_objects(table)
+      end
+
       defp matches_key?({crdt_key1, crdt_key2}, key) do
         case key do
           {^crdt_key1, ^crdt_key2} -> true
@@ -120,6 +131,19 @@ defmodule JumpWire.ETS do
           nil -> {:error, :not_found}
           val -> {:ok, val}
         end
+      end
+
+      defp drop_all_crdt_items(table) do
+        keys =
+          DeltaCrdt.to_map(@crdt)
+          |> Stream.filter(fn
+            {{^table, _}, _} -> true
+            _ -> false
+          end)
+          |> Stream.map(fn {key, _} -> key end)
+          |> Enum.into([])
+
+        DeltaCrdt.drop(@crdt, keys)
       end
     end
   end
