@@ -10,7 +10,7 @@ We welcome everyone interested to contribute to JumpWire! The codebase is organi
 
 Elixir and Rust are required to build the project. The exact versions needed can vary - the minimal Elixir version supported can be found in [mix.exs](mix.exs), but the [Dockerfile](Dockerfile) used to build a release will have the versions known to work. There is also a `.tools-versions` with the proper versions. Checkout [asdf](https://asdf-vm.com/) for more info.
 
-Before starting a dev environment for the first time, you must generate local secrets by running `mix deps.get` followed by `mix jumpwire.gen.secrets`. This will create a file at `config/dev.secrets.exs` which is omitted from source control.
+Before starting a dev environment for the first time, you must generate local secrets by running `mix deps.get` followed by `mix jumpwire.gen.secrets`. This will create a file at `config/dev.secrets.exs` which is omitted from source control. You'll find you Bearer Token in your secrets file. You can use that to make calls to the internal API.
 
 [Pebble](https://github.com/letsencrypt/pebble/) is used as local ACME server for generating TLS certificates. It requires golang and can be setup with `mix local.pebble`.
 

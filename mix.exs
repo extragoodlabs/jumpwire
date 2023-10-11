@@ -17,7 +17,7 @@ defmodule JumpWire.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       dialyzer: [
         plt_file: {:no_warn, "priv/plts/dialyzer.plt"},
-        plt_add_apps: [:mix],
+        plt_add_apps: [:mix]
       ],
       test_coverage: [tool: ExCoveralls],
       preferred_cli_env: [
@@ -25,8 +25,8 @@ defmodule JumpWire.MixProject do
         coveralls: :test,
         "coveralls.detail": :test,
         "coveralls.post": :test,
-        "coveralls.html": :test,
-      ],
+        "coveralls.html": :test
+      ]
     ]
   end
 
@@ -53,8 +53,7 @@ defmodule JumpWire.MixProject do
       # Using a git reference until a release is pushed containing this PR:
       # https://github.com/J0/phoenix_gen_socket_client/pull/64
       {:phoenix_gen_socket_client,
-       github: "J0/phoenix_gen_socket_client",
-       ref: "11ca72274437e48e4cbacc713e7e5300dcb78abc"},
+       github: "J0/phoenix_gen_socket_client", ref: "11ca72274437e48e4cbacc713e7e5300dcb78abc"},
       {:websocket_client, "~> 1.5"},
       {:warpath, "~> 0.6.2"},
       {:ex_aws, "~> 2.2.4", override: true},
@@ -132,19 +131,21 @@ defmodule JumpWire.MixProject do
       # benchmarking and profiling tools
       {:benchee, "~> 1.1"},
       {:faker, "~> 0.17"},
+      {:uuid, "~> 1.1"}
     ]
   end
 
   defp aliases do
     [
-      "release.docker": "cmd DOCKER_BUILDKIT=1 docker build -t #{@docker_image}:#{@version} -t #{@docker_image}:latest .",
+      "release.docker":
+        "cmd DOCKER_BUILDKIT=1 docker build -t #{@docker_image}:#{@version} -t #{@docker_image}:latest ."
     ]
   end
 
   defp releases do
     [
       jumpwire: [
-        steps: [:assemble, :tar],
+        steps: [:assemble, :tar]
       ]
     ]
   end
