@@ -1,9 +1,9 @@
-defmodule JumpWire.SSOMock do
+defmodule JumpWire.SSO.MockImpl do
   @moduledoc """
   Mock SSO module for testing.
   """
 
   use Mox
 
-  @behaviour JumpWire.SSOBehaviour
+  @behaviour JumpWire.SSO
 end

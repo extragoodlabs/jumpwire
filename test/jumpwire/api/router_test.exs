@@ -38,7 +38,7 @@ defmodule JumpWire.API.RouterTest do
 
   describe "/manifests" do
     test "GET returns a 200 status with valid SSO", %{mock_manifest: mock_manifest} do
-      expect(JumpWire.SSOMock, :fetch_active_assertion, 2, fn _ ->
+      expect(JumpWire.SSO.MockImpl, :fetch_active_assertion, 2, fn _ ->
         {:ok, %{computed: %{org_id: "test-org-id"}}}
       end)
 
@@ -69,7 +69,7 @@ defmodule JumpWire.API.RouterTest do
     end
 
     test "PUT returns a 201 status with valid input", %{mock_manifest: mock_manifest} do
-      expect(JumpWire.SSOMock, :fetch_active_assertion, 3, fn _ ->
+      expect(JumpWire.SSO.MockImpl, :fetch_active_assertion, 3, fn _ ->
         {:ok, %{computed: %{org_id: "test-org-id"}}}
       end)
 
@@ -108,7 +108,7 @@ defmodule JumpWire.API.RouterTest do
     end
 
     test "GET /:id returns a 200 status with valid manifest ID", %{mock_manifest: mock_manifest} do
-      expect(JumpWire.SSOMock, :fetch_active_assertion, 2, fn _ ->
+      expect(JumpWire.SSO.MockImpl, :fetch_active_assertion, 2, fn _ ->
         {:ok, %{computed: %{org_id: "test-org-id"}}}
       end)
 
@@ -146,7 +146,7 @@ defmodule JumpWire.API.RouterTest do
     end
 
     test "DELETE /:id returns a 200 status with valid manifest ID", %{mock_manifest: mock_manifest} do
-      expect(JumpWire.SSOMock, :fetch_active_assertion, 4, fn _ ->
+      expect(JumpWire.SSO.MockImpl, :fetch_active_assertion, 4, fn _ ->
         {:ok, %{computed: %{org_id: "test-org-id"}}}
       end)
 

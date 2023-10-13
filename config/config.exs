@@ -122,6 +122,6 @@ config :jumpwire, JumpWire.Analytics,
   api_key: "phc_GxUkxISBf1whq6dhJ3Ucb7hlPh7OqExJm8qSQqxhhCE",
   timeout: 5_000
 
-config :jumpwire, JumpWire.SSO, JumpWire.SSO
+config :jumpwire, :sso, module: JumpWire.SSO.SamlyImpl
 
 import_config "#{config_env()}.exs"

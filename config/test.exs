@@ -68,4 +68,4 @@ config :ex_aws, :kms,
   host: "localhost",
   port: 4566
 
-config :jumpwire, JumpWire.SSO, JumpWire.SSOMock
+config :jumpwire, JumpWire.SSO, JumpWire.SSO.MockImpl

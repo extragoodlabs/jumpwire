@@ -10,7 +10,7 @@ defmodule JumpWire.API.Router do
   import JumpWire.Router.Helpers
   require Logger
 
-  @sso_module Application.compile_env(:jumpwire, JumpWire.SSO)
+  @sso_module Application.compile_env(:jumpwire, [:sso, :module])
 
   plug(:match)
   plug(:put_secret_key_base)

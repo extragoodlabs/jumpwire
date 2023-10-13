@@ -1,4 +1,4 @@
-defmodule JumpWire.SSOBehaviour do
+defmodule JumpWire.SSO do
   @moduledoc """
   Shared SSO behaviour for JumpWire.
   """
