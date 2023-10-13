@@ -4,4 +4,5 @@ defmodule JumpWire.SSO do
   """
 
   @callback fetch_active_assertion(Plug.Conn.t()) :: {:ok, any} | :error
+  @callback create_client(assertion :: any(), id :: any(), manifest_id :: any()) :: {:ok, any()} | {:error, any()}
 end

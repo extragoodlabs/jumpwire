@@ -62,6 +62,7 @@ defmodule JumpWire.SSO.SamlyImpl do
 
   defp put_new_cert(sp, _cert, _key), do: sp
 
+  @spec create_client(assertion :: any(), id :: any(), manifest_id :: any()) :: {:ok, any()} | {:error, any()}
   @doc """
   Create an client based on a user's SAML assertions.
   """
