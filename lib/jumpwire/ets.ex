@@ -97,9 +97,6 @@ defmodule JumpWire.ETS do
       def delete_all(table) do
         # Drop all items from the CRDT
         drop_all_crdt_items(table)
-
-        # Delete all items from the ETS table
-        :ets.delete_all_objects(table)
       end
 
       defp matches_key?({crdt_key1, crdt_key2}, key) do

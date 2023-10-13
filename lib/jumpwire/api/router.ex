@@ -74,7 +74,7 @@ defmodule JumpWire.API.Router do
 
   put "/manifests" do
     with {:ok, assertion} <- @sso_module.fetch_active_assertion(conn),
-         uuid <- UUID.uuid4(),
+         uuid <- Uniq.UUID.uuid4(),
          {:ok, manifest} <-
            conn.body_params
            |> Map.put("id", uuid)

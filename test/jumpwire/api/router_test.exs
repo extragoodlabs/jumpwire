@@ -44,10 +44,9 @@ defmodule JumpWire.API.RouterTest do
 
       token = JumpWire.API.Token.get_root_token()
 
-      conn =
-        conn(:put, "/manifests", mock_manifest)
-        |> put_auth_header(token)
-        |> Router.call(@opts)
+      conn(:put, "/manifests", mock_manifest)
+      |> put_auth_header(token)
+      |> Router.call(@opts)
 
       conn =
         conn(:get, "/manifests")

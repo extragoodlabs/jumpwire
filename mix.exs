@@ -130,8 +130,7 @@ defmodule JumpWire.MixProject do
 
       # benchmarking and profiling tools
       {:benchee, "~> 1.1"},
-      {:faker, "~> 0.17"},
-      {:uuid, "~> 1.1"}
+      {:faker, "~> 0.17"}
     ]
   end
 
