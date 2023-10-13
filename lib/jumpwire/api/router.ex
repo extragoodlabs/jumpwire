@@ -12,26 +12,24 @@ defmodule JumpWire.API.Router do
 
   @sso_module Application.compile_env(:jumpwire, [:sso, :module])
 
-  plug(:match)
-  plug(:put_secret_key_base)
+  plug :match
+  plug :put_secret_key_base
 
-  plug(Plug.Session,
+  plug Plug.Session,
     store: :cookie,
     key: "_jumpwire_key",
     signing_salt: "I5bC7Dc3"
-  )
 
-  plug(:fetch_session)
-  plug(JumpWire.API.AuthPipeline)
-  plug(:fetch_query_params)
+  plug :fetch_session
+  plug JumpWire.API.AuthPipeline
+  plug :fetch_query_params
 
-  plug(Plug.Parsers,
+  plug Plug.Parsers,
     parsers: [{:json, json_decoder: Jason}],
     pass: ["*/*"]
-  )
 
-  plug(:json_response)
-  plug(:dispatch)
+  plug :json_response
+  plug :dispatch
 
   get "/status" do
     body = JumpWire.HealthCheck.status()
