@@ -64,8 +64,7 @@ defmodule JumpWire.API.Router do
 
         send_json_resp(conn, 200, body)
 
-      other ->
-        IO.puts("Failed to fetch active assertion: #{inspect(other)}")
+      _ ->
         send_json_resp(conn, 401, %{error: "SSO login required"})
     end
   end
@@ -88,8 +87,7 @@ defmodule JumpWire.API.Router do
         Logger.error("Failed to process manifest: #{inspect(reason)}")
         send_resp(conn, 400, "Failed to process manifest")
 
-      other ->
-        Logger.error("Unknown failure: #{inspect(other)}")
+      _ ->
         send_json_resp(conn, 500, %{error: "Failed to create manifest"})
     end
   end
@@ -112,15 +110,12 @@ defmodule JumpWire.API.Router do
   delete "manifests/:id" do
     id = String.downcase(id)
 
-    with {:ok, assertion} <- @sso_module.fetch_active_assertion(:stub),
-         _ <- JumpWire.Manifest.delete(assertion.computed.org_id, id) do
+    with {:ok, assertion} <- @sso_module.fetch_active_assertion(conn) do
+      JumpWire.Manifest.delete(assertion.computed.org_id, id)
       send_json_resp(conn, 200, %{message: "Manifest deleted"})
     else
       :error ->
         send_json_resp(conn, 401, %{error: "SSO login required"})
-
-      _ ->
-        send_json_resp(conn, 404, %{error: "Manifest not found"})
     end
   end
 
