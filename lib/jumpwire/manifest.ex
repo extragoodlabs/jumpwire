@@ -7,12 +7,12 @@ defmodule JumpWire.Manifest do
   @proxy_types [:postgresql, :mysql]
 
   typed_embedded_schema null: false do
-    field(:name, :string)
-    field(:root_type, Ecto.Enum, values: [:jumpwire | @proxy_types])
-    field(:configuration, :map)
-    field(:credentials, :map, default: nil, null: true, redact: true)
-    field(:classification, :string)
-    field(:organization_id, :string)
+    field :name, :string
+    field :root_type, Ecto.Enum, values: [:jumpwire | @proxy_types]
+    field :configuration, :map
+    field :credentials, :map, default: nil, null: true, redact: true
+    field :classification, :string
+    field :organization_id, :string
   end
 
   def proxy_types(), do: @proxy_types
