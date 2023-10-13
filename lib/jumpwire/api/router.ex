@@ -59,7 +59,7 @@ defmodule JumpWire.API.Router do
             |> Stream.map(fn m -> {m.id, m.name} end)
             |> Map.new()
           else
-            JumpWire.Manifest.fetch(assertion.computed.org_id, :all)
+            JumpWire.Manifest.all(assertion.computed.org_id)
           end
 
         send_json_resp(conn, 200, body)

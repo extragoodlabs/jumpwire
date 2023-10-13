@@ -137,6 +137,13 @@ defmodule JumpWire.Manifest do
     end)
   end
 
+  @doc """
+  Return all the manifests for the specified organization.
+  """
+  def all(org_id) do
+    JumpWire.GlobalConfig.all(:manifests, {org_id, :_})
+  end
+
   @spec fetch(String.t, String.t | :all) :: [Manifest.t] | {:error, :not_found} | {:ok, [Manifest.t]}
   @doc """
   Attempt to find and return a manifest from the provided ID. A special
@@ -144,10 +151,6 @@ defmodule JumpWire.Manifest do
   This is intended as a placeholder for further processing.
   """
   def fetch(_org_id, "router"), do: {:ok, nil}
-
-  def fetch(org_id, :all) do
-    JumpWire.GlobalConfig.all(:manifests, {org_id, :_})
-  end
 
   def fetch(org_id, manifest_id) do
     JumpWire.GlobalConfig.fetch(:manifests, {org_id, manifest_id})
