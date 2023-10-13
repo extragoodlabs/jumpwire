@@ -112,7 +112,7 @@ defmodule JumpWire.API.Router do
   delete "manifests/:id" do
     id = String.downcase(id)
 
-    with {:ok, assertion} <- @sso_module.fetch_active_assertion(conn),
+    with {:ok, assertion} <- @sso_module.fetch_active_assertion(:stub),
          _ <- JumpWire.Manifest.delete(assertion.computed.org_id, id) do
       send_json_resp(conn, 200, %{message: "Manifest deleted"})
     else
