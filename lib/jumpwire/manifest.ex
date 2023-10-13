@@ -137,7 +137,7 @@ defmodule JumpWire.Manifest do
     end)
   end
 
-  @spec fetch(any, any) :: list | {:error, :not_found} | {:ok, any}
+  @spec fetch(String.t, String.t | :all) :: [Manifest.t] | {:error, :not_found} | {:ok, [Manifest.t]}
   @doc """
   Attempt to find and return a manifest from the provided ID. A special
   ID value of `router` will return a nil manifest with no error.
