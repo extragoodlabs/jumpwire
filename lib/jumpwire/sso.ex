@@ -15,10 +15,6 @@ defmodule JumpWire.SSO.SamlyImpl do
     end
   end
 
-  def fetch_active_assertion(:stub) do
-    {:ok, %{computed: %{org_id: "org_generic"}}}
-  end
-
   @spec fetch_active_assertion(Plug.Conn.t()) :: {:ok, any} | :error
   def fetch_active_assertion(conn) do
     case Samly.get_active_assertion(conn) do
