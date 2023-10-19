@@ -34,7 +34,8 @@ defmodule JumpWire.Proxy.Schema do
         Logger.error("Unable to find manifest #{manifest_id} for schema #{schema_id}")
         {:error, :manifest_not_found}
 
-      error -> error
+      error ->
+        error
     end
   end
 
@@ -61,8 +62,12 @@ defmodule JumpWire.Proxy.Schema do
 
       mod =
         case manifest.root_type do
-          :postgresql -> JumpWire.Proxy.Postgres.Setup
-          :mysql -> JumpWire.Proxy.MySQL.Setup
+          :postgresql ->
+            JumpWire.Proxy.Postgres.Setup
+
+          :mysql ->
+            JumpWire.Proxy.MySQL.Setup
+
           _ ->
             Logger.warn("Unhandled root type #{manifest.root_type}")
             nil
@@ -75,6 +80,17 @@ defmodule JumpWire.Proxy.Schema do
   end
 
   def hook(_schema, _lifecycle), do: Task.completed(:ok)
+
+  def fetch(org_id, manifest_id, schema_id) do
+    JumpWire.GlobalConfig.fetch(:proxy_schemas, {org_id, manifest_id, schema_id})
+  end
+
+  @doc """
+  Put a manifest into the global config.
+  """
+  def put(org_id, schema) do
+    JumpWire.GlobalConfig.put(:proxy_schemas, {org_id, schema.manifest_id, schema.id}, schema)
+  end
 
   @doc """
   List all known schemas for a given org.
@@ -89,4 +105,29 @@ defmodule JumpWire.Proxy.Schema do
   def list_all(org_id, manifest_id) do
     JumpWire.GlobalConfig.all(:proxy_schemas, {org_id, manifest_id, :_})
   end
+
+  @doc """
+  Delete the schema from the global config.
+  """
+  def delete(org_id, manifest_id, id) do
+    JumpWire.GlobalConfig.delete(:proxy_schemas, {org_id, manifest_id, id})
+  end
+
+  def denormalize_schema_fields(schema) do
+    fields = schema.fields
+    denormalized_fields = denormalize_fields(fields)
+  end
+
+  defp denormalize_fields(fields) when is_map(fields) do
+    fields
+    |> Enum.map(&denormalize_field/1)
+    |> Map.new()
+  end
+
+  defp denormalize_fields(fields) when is_list(fields), do: Enum.map(fields, &denormalize_fields/1)
+  defp denormalize_fields(value), do: value
+
+  defp denormalize_field({"$." <> path, [label]}), do: {path, label}
+  defp denormalize_field({"$." <> path, labels}), do: {path, denormalize_fields(labels)}
+  defp denormalize_field({path, labels}), do: {denormalize_fields(path), denormalize_fields(labels)}
 end

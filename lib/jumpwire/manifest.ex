@@ -144,7 +144,7 @@ defmodule JumpWire.Manifest do
     JumpWire.GlobalConfig.all(:manifests, {org_id, :_})
   end
 
-  @spec fetch(String.t, String.t | :all) :: [Manifest.t] | {:error, :not_found} | {:ok, [Manifest.t]}
+  @spec fetch(String.t(), String.t() | :all) :: [Manifest.t()] | {:error, :not_found} | {:ok, [Manifest.t()]}
   @doc """
   Attempt to find and return a manifest from the provided ID. A special
   ID value of `router` will return a nil manifest with no error.
