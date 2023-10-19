@@ -15,10 +15,12 @@ defmodule JumpWire.ETS do
       end
 
       def set(table, subkey, values) when is_list(values) do
-        keys = DeltaCrdt.to_map(@crdt)
-        |> Stream.map(fn {key, _} -> key end)
-        |> Stream.filter(fn {crdt_table, _} -> crdt_table == table end)
-        |> Stream.filter(fn {_, key} -> elem(key, 0) == subkey end)
+        keys =
+          DeltaCrdt.to_map(@crdt)
+          |> Stream.map(fn {key, _} -> key end)
+          |> Stream.filter(fn {crdt_table, _} -> crdt_table == table end)
+          |> Stream.filter(fn {_, key} -> elem(key, 0) == subkey end)
+
         DeltaCrdt.drop(@crdt, keys)
 
         put_all(table, values)
@@ -70,21 +72,31 @@ defmodule JumpWire.ETS do
       Delete items with a partial or exact key match.
       """
       def delete(table, key) when is_tuple(key) do
-        keys = DeltaCrdt.to_map(@crdt)
-        |> Stream.filter(fn
-          {{^table, _}, _} -> true
-          _ -> false
-        end)
-        |> Stream.map(fn {key, _} -> key end)
-        |> Stream.filter(fn {_table, crdt_key} ->
-          matches_key?(crdt_key, key)
-        end)
-        |> Enum.into([])
+        keys =
+          DeltaCrdt.to_map(@crdt)
+          |> Stream.filter(fn
+            {{^table, _}, _} -> true
+            _ -> false
+          end)
+          |> Stream.map(fn {key, _} -> key end)
+          |> Stream.filter(fn {_table, crdt_key} ->
+            matches_key?(crdt_key, key)
+          end)
+          |> Enum.into([])
+
         DeltaCrdt.drop(@crdt, keys)
       end
 
       def delete(table, id) do
         DeltaCrdt.delete(@crdt, {table, id})
+      end
+
+      @doc """
+      Delete all items from the given table.
+      """
+      def delete_all(table) do
+        # Drop all items from the CRDT
+        drop_all_crdt_items(table)
       end
 
       defp matches_key?({crdt_key1, crdt_key2}, key) do
@@ -117,6 +129,19 @@ defmodule JumpWire.ETS do
           val -> {:ok, val}
         end
       end
+
+      defp drop_all_crdt_items(table) do
+        keys =
+          DeltaCrdt.to_map(@crdt)
+          |> Stream.filter(fn
+            {{^table, _}, _} -> true
+            _ -> false
+          end)
+          |> Stream.map(fn {key, _} -> key end)
+          |> Enum.into([])
+
+        DeltaCrdt.drop(@crdt, keys)
+      end
     end
   end
 
@@ -129,6 +154,7 @@ defmodule JumpWire.ETS do
 
   def init(args) do
     {tables, args} = Map.pop(args, :tables, [])
+
     tables
     |> Stream.map(fn
       {table, type} -> {table, type}
@@ -137,6 +163,7 @@ defmodule JumpWire.ETS do
     |> Enum.each(fn {table, type} ->
       :ets.new(table, [type, :named_table, :public, read_concurrency: true])
     end)
+
     Hydrax.DeltaCrdt.init(args)
   end
 
@@ -149,10 +176,12 @@ defmodule JumpWire.ETS do
   end
 
   def on_diffs([]), do: :ok
+
   def on_diffs([{:add, {table, key}, value} | diffs]) do
     :ets.insert(table, {key, value})
     on_diffs(diffs)
   end
+
   def on_diffs([{:remove, {table, key}} | diffs]) do
     :ets.delete(table, key)
     on_diffs(diffs)

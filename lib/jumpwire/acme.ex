@@ -10,10 +10,12 @@ defmodule JumpWire.ACME do
   def store_cert_config(name, %{key: key, cert: cert, cacerts: chain}) do
     pem_key = X509.PrivateKey.from_pem!(key)
     der_cert = X509.Certificate.from_pem!(cert) |> X509.Certificate.to_der()
-    der_chain = chain
-    |> String.split("\n\n")
-    |> Stream.map(&X509.Certificate.from_pem!/1)
-    |> Enum.map(&X509.Certificate.to_der/1)
+
+    der_chain =
+      chain
+      |> String.split("\n\n")
+      |> Stream.map(&X509.Certificate.from_pem!/1)
+      |> Enum.map(&X509.Certificate.to_der/1)
 
     store_cert_config(name, pem_key, der_cert, der_chain)
   end
@@ -21,7 +23,7 @@ defmodule JumpWire.ACME do
   defp store_cert_config(name, pem_key, der_cert, der_chain) do
     der_key = {:RSAPrivateKey, X509.PrivateKey.to_der(pem_key)}
     value = [key: der_key, cert: der_cert, cacerts: der_chain]
-    JumpWire.SSO.set_tls_cert(name, der_cert, pem_key)
+    JumpWire.SSO.SamlyImpl.set_tls_cert(name, der_cert, pem_key)
     name = String.to_charlist(name)
     JumpWire.GlobalConfig.put(:certificates, name, value)
   end
@@ -39,14 +41,18 @@ defmodule JumpWire.ACME do
 
   defp generate_self_signed_cert() do
     key = X509.PrivateKey.new_rsa(2048)
-    cert = X509.Certificate.self_signed(
-      key,
-      "/CN=JumpWire Self-Signed",
-      template: :server,
-      extensions: [
-        subject_alt_name: X509.Certificate.Extension.subject_alt_name(["localhost", "*"])
-      ]
-    ) |> X509.Certificate.to_der()
+
+    cert =
+      X509.Certificate.self_signed(
+        key,
+        "/CN=JumpWire Self-Signed",
+        template: :server,
+        extensions: [
+          subject_alt_name: X509.Certificate.Extension.subject_alt_name(["localhost", "*"])
+        ]
+      )
+      |> X509.Certificate.to_der()
+
     store_cert_config("selfsigned", key, cert, [cert])
   end
 
@@ -55,14 +61,18 @@ defmodule JumpWire.ACME do
 
     JumpWire.TLS.cached_cert(hostname)
     |> then(fn
-      nil -> read_from_disk(hostname, config)
+      nil ->
+        read_from_disk(hostname, config)
+
       {:ok, cert} ->
         store_cert_disk(cert, hostname, config)
         {:ok, cert}
     end)
     |> if_nil(fn ->
       case validate_domain(hostname) do
-        :ok -> order_cert(hostname, config)
+        :ok ->
+          order_cert(hostname, config)
+
         err ->
           Logger.error("Invalid ACME configuration")
           {:error, err}
@@ -72,9 +82,11 @@ defmodule JumpWire.ACME do
 
   def validate_domain(""), do: :invalid
   def validate_domain("."), do: :invalid
+
   def validate_domain(host) when is_binary(host) do
     host |> String.split(".", trim: true) |> validate_domain()
   end
+
   def validate_domain([part | _]) when byte_size(part) > 63, do: :invalid
   def validate_domain([_ | rest]), do: validate_domain(rest)
   def validate_domain([]), do: :ok
@@ -83,6 +95,7 @@ defmodule JumpWire.ACME do
   def order_cert(domain, config) do
     retry with: exponential_backoff(1_000) |> randomize() |> expiry(300_000) do
       key = get_account_key(config)
+
       with {:ok, session} <- account_session(key, config),
            task = %Task{} <- new_cert(session, domain, config) do
         task
@@ -96,7 +109,7 @@ defmodule JumpWire.ACME do
               err -> err
             end
 
-          Logger.error("Failed to create HTTP session for letsencrypt: #{inspect message}")
+          Logger.error("Failed to create HTTP session for letsencrypt: #{inspect(message)}")
           {:error, message}
       end
     end
@@ -110,6 +123,7 @@ defmodule JumpWire.ACME do
 
       {:ok, cert_data} ->
         cert = Keyword.get(cert_data, :cert)
+
         if cert_remaining_seconds(cert) < min_seconds do
           Logger.info("Renewing certificate for #{host}")
           order_cert(host, config)
@@ -120,6 +134,7 @@ defmodule JumpWire.ACME do
   defp cert_remaining_seconds(cert) when is_binary(cert) do
     cert |> X509.Certificate.from_der!() |> cert_remaining_seconds()
   end
+
   defp cert_remaining_seconds(cert) do
     {:Validity, _not_before, not_after} = X509.Certificate.validity(cert)
     now = DateTime.utc_now()
@@ -151,14 +166,15 @@ defmodule JumpWire.ACME do
   defp read_from_disk(domain, %{cert_dir: root_dir}) do
     path = Path.join(root_dir, domain)
 
-    cert_data = [:key, :cert, :cacerts]
-    |> Enum.map(fn key ->
-      case Path.join(path, Atom.to_string(key)) |> File.read() do
-        {:ok, data} -> {key, data}
-        _ -> {key, nil}
-      end
-    end)
-    |> Enum.into(%{})
+    cert_data =
+      [:key, :cert, :cacerts]
+      |> Enum.map(fn key ->
+        case Path.join(path, Atom.to_string(key)) |> File.read() do
+          {:ok, data} -> {key, data}
+          _ -> {key, nil}
+        end
+      end)
+      |> Enum.into(%{})
 
     if nil in Map.values(cert_data) do
       File.rm_rf!(path)
@@ -186,6 +202,7 @@ defmodule JumpWire.ACME do
 
   defp account_session(key, config) do
     Logger.debug("Using existing ACME account")
+
     with {:ok, session} <- API.new_session(config.directory_url, key),
          {:ok, session} <- API.fetch_kid(session) do
       {:ok, session}
@@ -194,7 +211,9 @@ defmodule JumpWire.ACME do
         Logger.warn("ACME account reported invalid, purging")
         delete_account_key(config)
         account_session(nil, config)
-      err -> err
+
+      err ->
+        err
     end
   end
 
@@ -205,6 +224,7 @@ defmodule JumpWire.ACME do
 
       retry with: exponential_backoff(1_000) |> randomize() |> expiry(300_000) do
         Logger.info("Ordering a new certificate for #{domain}")
+
         with {:ok, order, session} <- API.new_order(session, [domain]),
              _ <- Logger.debug("Waiting for cert order to be ready"),
              {private_key, order, session} <- process_new_order(session, order, domain, config) do
@@ -214,7 +234,7 @@ defmodule JumpWire.ACME do
           {:ok, cert_data}
         else
           err ->
-            Logger.error("Failed to process ACME order: #{inspect err}")
+            Logger.error("Failed to process ACME order: #{inspect(err)}")
             :error
         end
       end
@@ -229,6 +249,7 @@ defmodule JumpWire.ACME do
   defp store_cert_disk(cert_info, name, config) do
     path = Path.join(config.cert_dir, name)
     File.mkdir_p!(path)
+
     Enum.each(cert_info, fn {key, value} ->
       # write the key, cert, and cacerts to separate files
       Path.join(path, Atom.to_string(key)) |> File.write(value)
@@ -247,8 +268,10 @@ defmodule JumpWire.ACME do
 
   defp process_new_order(session, order = %{status: :pending}, domain, config) do
     Logger.debug("Certificate for #{domain} is pending")
+
     case authorize_order(order.authorizations, session, domain, config) do
-      {:error, _} = err -> err
+      {:error, _} = err ->
+        err
 
       {pending, session} ->
         {pending_authorizations, pending_challenges} = Enum.unzip(pending)
@@ -270,12 +293,14 @@ defmodule JumpWire.ACME do
     Logger.info("Certificate for #{domain} is ready")
 
     private_key = X509.PrivateKey.new_rsa(config.key_size)
-    csr = private_key
-    |> X509.CSR.new(
-      {:rdnSequence, []},
-      extension_request: [X509.Certificate.Extension.subject_alt_name([domain])]
-    )
-    |> X509.CSR.to_der()
+
+    csr =
+      private_key
+      |> X509.CSR.new(
+        {:rdnSequence, []},
+        extension_request: [X509.Certificate.Extension.subject_alt_name([domain])]
+      )
+      |> X509.CSR.to_der()
 
     {:ok, _finalization, session} = API.finalize(session, order, csr)
     {:ok, order, session} = API.wait_for_order_ready(session, order)
@@ -289,8 +314,11 @@ defmodule JumpWire.ACME do
       challenges = Enum.group_by(challenges, fn c -> c.type end)
 
       case challenges do
-        %{"http-01" => [%{status: :valid} | _]} -> {:valid, session}
-        %{"dns-01" => [%{status: :valid} | _]} -> {:valid, session}
+        %{"http-01" => [%{status: :valid} | _]} ->
+          {:valid, session}
+
+        %{"dns-01" => [%{status: :valid} | _]} ->
+          {:valid, session}
 
         %{"http-01" => [challenge = %{status: :pending} | _]} ->
           Logger.info("Attempting http-01 validation")
@@ -299,12 +327,14 @@ defmodule JumpWire.ACME do
           {:ok, _challenge_response, session} = API.challenge(session, challenge)
           {:pending, challenge.token, session}
 
-        _ -> {:error, :invalid_challenge}
+        _ ->
+          {:error, :invalid_challenge}
       end
     end
   end
 
   defp validate_authorizations(session, []), do: {:ok, session}
+
   defp validate_authorizations(session, [authorization | other_authorizations]) do
     Logger.debug("Checking validity of authorization #{authorization}")
 
@@ -312,6 +342,7 @@ defmodule JumpWire.ACME do
 
     # Authorization statuses from RFC8555: https://datatracker.ietf.org/doc/html/rfc8555#section-7.1.6
     statuses = challenges |> Stream.map(& &1.status) |> Enum.uniq()
+
     cond do
       :ready in statuses ->
         validate_authorizations(session, other_authorizations)
@@ -320,18 +351,17 @@ defmodule JumpWire.ACME do
         validate_authorizations(session, other_authorizations)
 
       :invalid in statuses ->
-        Logger.error("Invalid challenges reported: #{inspect challenges}")
+        Logger.error("Invalid challenges reported: #{inspect(challenges)}")
         {:error, :invalid}
 
       :pending in statuses or :processing in statuses ->
-          :pending
+        :pending
 
       true ->
-        Logger.error("Unknown challenge status: #{inspect challenges}")
+        Logger.error("Unknown challenge status: #{inspect(challenges)}")
         {:error, :invalid}
     end
   end
-
 
   defp if_nil(nil, fun), do: fun.()
   defp if_nil(val, _), do: val

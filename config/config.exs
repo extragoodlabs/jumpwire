@@ -11,14 +11,15 @@ config :logger,
   backends: [
     :console,
     Sentry.LoggerBackend,
-    JumpWire.UiLog.Backend,
+    JumpWire.UiLog.Backend
   ],
   compile_time_purge_matching: [[module: TelemetryMetricsCloudwatch.Caches]]
+
 config :logger, :console,
   format: "$time [$level] $metadata$message\n",
   metadata: [:request_id, :org_id, :module, :source, :manifest, :client]
-config :logger, JumpWire.UiLog.Backend,
-  level: :warning
+
+config :logger, JumpWire.UiLog.Backend, level: :warning
 
 config :tesla, :adapter, Tesla.Adapter.Mint
 
@@ -49,7 +50,7 @@ config :hydrax, :supervisor,
     JumpWire.ACME.CertRenewal,
     # Using a child spec is required, anonymous functions will cause
     # an error when releasing
-    %{id: Task, restart: :temporary, start: {Task, :start_link, [JumpWire.ACME, :ensure_cert, []]}},
+    %{id: Task, restart: :temporary, start: {Task, :start_link, [JumpWire.ACME, :ensure_cert, []]}}
   ]
 
 config :jumpwire, :proxy,
@@ -64,6 +65,7 @@ config :jumpwire, JumpWire.Proxy.Postgres,
   keepalive: true,
   port: 5432,
   pool_size: 4
+
 config :jumpwire, JumpWire.Proxy.MySQL,
   port: 3306,
   pool_size: 4
@@ -119,5 +121,7 @@ config :jumpwire, JumpWire.Analytics,
   api_url: "https://events.jumpwire.io",
   api_key: "phc_GxUkxISBf1whq6dhJ3Ucb7hlPh7OqExJm8qSQqxhhCE",
   timeout: 5_000
+
+config :jumpwire, :sso, module: JumpWire.SSO.SamlyImpl
 
 import_config "#{config_env()}.exs"

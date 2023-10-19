@@ -23,15 +23,17 @@ defmodule JumpWire.API.AuthorizationPlug do
   end
 
   defp get_method_permissions(method, permissions) when is_map(permissions) do
-    Map.get(permissions, :all, [])
-    ++ Map.get(permissions, "all", [])
-    ++ Map.get(permissions, method, [])
+    Map.get(permissions, :all, []) ++
+      Map.get(permissions, "all", []) ++
+      Map.get(permissions, method, [])
   end
+
   defp get_method_permissions(_, _), do: []
 
   defp check_path_permissions(_, []), do: :error
   defp check_path_permissions(_, [:root | _]), do: :ok
   defp check_path_permissions([path | _], [path | _]), do: :ok
+
   defp check_path_permissions(path, [_ | rest]) do
     check_path_permissions(path, rest)
   end
