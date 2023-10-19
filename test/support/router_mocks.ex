@@ -1,4 +1,7 @@
 defmodule JumpWire.API.RouterMocks do
+  @moduledoc """
+  Mocks for the JumpWire API Router
+  """
   @mock_org_id "test-org-id"
 
   def manifest(name) do
@@ -28,7 +31,7 @@ defmodule JumpWire.API.RouterMocks do
       "fields" => %{
         "name" => "pii",
         "address" => "pii",
-        "favorite_cheese" => "secret",
+        "favorite_cheese" => "secret"
       }
     }
   end

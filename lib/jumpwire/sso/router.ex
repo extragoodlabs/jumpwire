@@ -8,15 +8,20 @@ defmodule JumpWire.SSO.Router do
   alias JumpWire.API.Token
   import JumpWire.Router.Helpers
 
+  @sso_module Application.compile_env(:jumpwire, [:sso, :module])
+
   plug :match
 
   # Required for CSRF token handling in the Samly router
   plug :put_secret_key_base
+
   plug Plug.Session,
     store: :cookie,
     key: "_jumpwire_key",
     signing_salt: "I5bC7Dc3"
+
   plug :fetch_session
+
   plug Plug.Parsers,
     parsers: [:urlencoded, :multipart, :json],
     pass: ["*/*"],
@@ -26,6 +31,7 @@ defmodule JumpWire.SSO.Router do
 
   get "/debug" do
     data = Samly.get_active_assertion(conn) |> Jason.encode!()
+
     conn
     |> put_resp_header("content-type", "application/json")
     |> send_resp(200, data)
@@ -67,6 +73,7 @@ defmodule JumpWire.SSO.Router do
 
   get "/result" do
     assertion_key = get_session(conn, "samly_assertion_key")
+
     case assertion_key do
       {_idp, _name} ->
         token = Token.sign_sso_key(assertion_key)
@@ -83,8 +90,8 @@ defmodule JumpWire.SSO.Router do
   post "/validate" do
     with {:ok, token} <- Map.fetch(conn.body_params, "sso_code"),
          {:ok, key} <- Token.verify_sso_key(token),
-         {:ok, _assertion} <- JumpWire.SSO.fetch_assertion(conn, key) do
-      Logger.debug("Verified SSO token for #{inspect key}")
+         {:ok, _assertion} <- @sso_module.fetch_assertion(conn, key) do
+      Logger.debug("Verified SSO token for #{inspect(key)}")
       body = %{message: "Successfully authenticated"} |> Jason.encode!()
       # TODO: optionally flesh out API permissions from SSO attributes
       permissions = %{all: [:root]}
@@ -99,6 +106,7 @@ defmodule JumpWire.SSO.Router do
       _ ->
         Logger.warn("Failed to validate SSO session")
         body = %{error: "Invalid SSO token provided"} |> Jason.encode!()
+
         conn
         |> put_resp_header("content-type", "application/json")
         |> send_resp(403, body)
@@ -121,5 +129,5 @@ defmodule JumpWire.SSO.Router do
     end
   end
 
-  forward "/", to: Samly.Router
+  forward("/", to: Samly.Router)
 end

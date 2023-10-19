@@ -114,8 +114,7 @@ defmodule JumpWire.Proxy.Schema do
   end
 
   def denormalize_schema_fields(schema) do
-    fields = schema.fields
-    denormalized_fields = denormalize_fields(fields)
+    denormalize_fields(schema.fields)
   end
 
   defp denormalize_fields(fields) when is_map(fields) do

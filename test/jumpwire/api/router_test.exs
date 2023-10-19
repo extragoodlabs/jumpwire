@@ -198,8 +198,6 @@ defmodule JumpWire.API.RouterTest do
 
       assert conn.status == 201
 
-      {:ok, schema} = Jason.decode(conn.resp_body)
-
       # get the schemas
       conn =
         conn(:get, "/manifests/#{manifest_id}/proxy-schemas")
