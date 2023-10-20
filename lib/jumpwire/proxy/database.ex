@@ -355,4 +355,17 @@ defmodule JumpWire.Proxy.Database do
 
     put_tables(org_id, db_id, tables, schemas)
   end
+
+  @doc """
+  Sanitize a string being passed in as part of the connection params.
+  """
+  def sanitize_id(id) do
+    if String.contains?(id, "'") do
+      updated = String.replace(id, "'", "")
+      Logger.warning("Invalid value passed as connection parameter: #{inspect id}. The value will be updated to #{inspect updated}")
+      updated
+    else
+      id
+    end
+  end
 end

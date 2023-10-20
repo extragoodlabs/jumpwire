@@ -1,13 +1,14 @@
+use crate::filter::TableFilterVisit;
 use rustler::{Atom, Binary, Env, Error, NifResult, NifUnitEnum, ResourceArc, Term};
 use serde_rustler::prefixed_to_term;
-use sqlparser::ast::{
-    visit_statements_mut, BinaryOperator, Expr, Ident, ObjectName, SetExpr, Statement, TableFactor,
-    Value,
-};
+use sqlparser::ast::{visit_statements_mut, BinaryOperator, Expr, Ident, Statement, Value};
 use sqlparser::dialect::{GenericDialect, MySqlDialect, PostgreSqlDialect};
 use sqlparser::parser::{Parser, ParserError};
 use std::ops::ControlFlow;
 use std::sync::Mutex;
+
+mod filter;
+mod matcher;
 
 mod atoms {
     rustler::atoms! {
@@ -129,44 +130,12 @@ fn add_table_selection<'a>(
         .try_lock()
         .map_err(|_| Error::Atom("mutex_lock_failure"))?;
 
-    let table_ident = vec![table];
+    // TODO: better matching for the Ident, allow table name to have a specified namespace
+    let table_ident = vec![table.to_lowercase()];
 
     // find all selections, create a where clause or modify it if possible
-    // TODO: recurse inner statements
-    // TODO: check joins on tables
-    // TODO: handle other statements besides Query
-    // TODO: better matching for the Ident, allow table name to have a specified namespace
     visit_statements_mut(&mut *statement, |stmt| {
-        match stmt {
-            Statement::Query(ref mut query) => match *query.body {
-                SetExpr::Select(ref mut select) => {
-                    let table_match = select.from.iter().any(|table| match &table.relation {
-                        TableFactor::Table {
-                            name: ObjectName(name),
-                            ..
-                        } => {
-                            let ident: Vec<String> = name.iter().map(|i| i.value.clone()).collect();
-
-                            ident == table_ident
-                        }
-                        _ => false,
-                    });
-                    if table_match {
-                        select.selection = match &select.selection {
-                            None => Some(selection.clone()),
-                            Some(existing) => Some(Expr::BinaryOp {
-                                op: BinaryOperator::And,
-                                left: Box::new(existing.clone()),
-                                right: Box::new(selection.clone()),
-                            }),
-                        };
-                    }
-                }
-                _ => (),
-            },
-            _ => (),
-        };
-
+        stmt.visit(&table_ident, &selection);
         ControlFlow::<()>::Continue(())
     });
     Ok(atoms::ok())

@@ -405,7 +405,9 @@ defmodule JumpWire.Proxy.Postgres do
     |> Stream.flat_map(fn
       {"user", value} ->
         case String.split(value, "#", parts: 2) do
-          [user, jw_id] -> [{"user", user}, {"jw_id", jw_id}]
+          [user, jw_id] ->
+            [{"user", user}, {"jw_id", Database.sanitize_id(jw_id)}]
+
           _ -> [{"user", value}]
         end
       x -> [x]
