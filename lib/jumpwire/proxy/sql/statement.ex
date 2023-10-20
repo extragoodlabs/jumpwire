@@ -202,7 +202,7 @@ defmodule JumpWire.Proxy.SQL.Statement do
   typedstruct module: OrderByExpr do
     field :expr, Statment.expr()
     field :asc, boolean()
-    field :nulls_first, boolean()
+    field :nulls_first, boolean() | nil
   end
 
   typedstruct module: Offset do
