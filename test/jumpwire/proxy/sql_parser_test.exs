@@ -844,6 +844,175 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     ]
   end
 
+  test "adding where clause to a query" do
+    query = "SELECT * FROM weather"
+    assert {:ok, [{_, ref}]} = Parser.parse_postgresql(query)
+    assert :ok = Parser.add_table_selection(ref, "weather", "hello", :eq, "you")
+    expected = "SELECT * FROM weather WHERE hello = 'you'"
+    assert {:ok, expected} == Parser.to_sql(ref)
+  end
+
+  test "adding where clause to a query with mixed casing" do
+    query = "SELECT * FROM wEaThEr"
+    assert {:ok, [{_, ref}]} = Parser.parse_postgresql(query)
+    assert :ok = Parser.add_table_selection(ref, "weather", "hello", :eq, "you")
+    expected = "SELECT * FROM wEaThEr WHERE hello = 'you'"
+    assert {:ok, expected} == Parser.to_sql(ref)
+  end
+
+
+  test "adding where clause to a join" do
+    query = "SELECT * FROM weather JOIN cities ON weather.city = cities.id"
+    assert {:ok, [{_, ref}]} = Parser.parse_postgresql(query)
+    assert :ok = Parser.add_table_selection(ref, "cities", "hello", :eq, "you")
+    expected = """
+    SELECT * FROM weather JOIN cities ON weather.city = cities.id
+    WHERE hello = 'you'
+    """
+    assert {:ok, sql} = Parser.to_sql(ref)
+    assert normalize(sql) == normalize(expected)
+  end
+
+  test "adding where clause to inner select" do
+    query = """
+    SELECT conname, conrelid::pg_catalog.regclass AS ontable,
+           pg_catalog.pg_get_constraintdef(oid, true) AS condef
+    FROM pg_catalog.pg_constraint c
+    WHERE confrelid IN (SELECT partition_ancestors FROM fake_table
+                        UNION ALL VALUES ('1234'::pg_catalog.regclass))
+    AND contype = 'f' AND conparentid = 0
+    ORDER BY conname;
+    """
+    assert {:ok, [{_, ref}]} = Parser.parse_postgresql(query)
+    assert :ok = Parser.add_table_selection(ref, "fake_table", "secret", :eq, "agent")
+    expected = """
+    SELECT conname, conrelid::pg_catalog.regclass AS ontable,
+           pg_catalog.pg_get_constraintdef(oid, true) AS condef
+    FROM pg_catalog.pg_constraint c
+    WHERE confrelid IN (
+      SELECT partition_ancestors FROM fake_table
+      WHERE secret = 'agent'
+      UNION ALL VALUES ('1234'::pg_catalog.regclass)
+    )
+    AND contype = 'f' AND conparentid = 0
+    ORDER BY conname;
+    """
+    assert {:ok, sql} = Parser.to_sql(ref)
+    assert normalize(sql) == normalize(expected)
+  end
+
+  test "adding where clause to update" do
+    query = "UPDATE parser SET flavor = 'mud' WHERE flavor = 'candy apple';"
+    assert {:ok, [{_, ref}]} = Parser.parse_postgresql(query)
+    assert :ok = Parser.add_table_selection(ref, "parser", "hello", :eq, "you")
+    expected = """
+    UPDATE parser SET flavor = 'mud'
+    WHERE flavor = 'candy apple' AND hello = 'you'
+    """
+    assert {:ok, sql} = Parser.to_sql(ref)
+    assert normalize(sql) == normalize(expected)
+  end
+
+  test "adding where clause to delete" do
+    query = "DELETE FROM everything_all_the_time"
+    assert {:ok, [{_, ref}]} = Parser.parse_postgresql(query)
+    assert :ok = Parser.add_table_selection(ref, "everything_all_the_time", "hello", :eq, "you")
+    expected = """
+    DELETE FROM everything_all_the_time
+    WHERE hello = 'you'
+    """
+    assert {:ok, sql} = Parser.to_sql(ref)
+    assert normalize(sql) == normalize(expected)
+  end
+
+  test "adding where clause to subquery in function args" do
+    query = "SELECT LTRIM(address, (SELECT street FROM address)) from customer;"
+    assert {:ok, [{_, ref}]} = Parser.parse_postgresql(query)
+    assert :ok = Parser.add_table_selection(ref, "address", "country", :eq, "Canada")
+    expected = """
+    SELECT LTRIM(address, (SELECT street FROM address WHERE country = 'CANADA')) from customer
+    """
+    assert {:ok, sql} = Parser.to_sql(ref)
+    assert normalize(sql) == normalize(expected)
+  end
+
+  test "adding where clause to nested select" do
+    query = "SELECT (SELECT name FROM genre);"
+    assert {:ok, [{_, ref}]} = Parser.parse_postgresql(query)
+    assert :ok = Parser.add_table_selection(ref, "genre", "owner", :eq, "paramount")
+    expected = """
+    SELECT (SELECT name FROM genre WHERE owner = 'paramount');
+    """
+    assert {:ok, sql} = Parser.to_sql(ref)
+    assert normalize(sql) == normalize(expected)
+  end
+
+  test "adding where clause to CTE" do
+    query = """
+    WITH category_year AS (
+      SELECT title, name AS category, release_year
+      FROM film
+      INNER JOIN film_category ON film_category.film_id = film.film_id
+      INNER JOIN category ON film_category.category_id = category.category_id
+    ) SELECT release_year, category, count(*)
+    FROM category_year
+    GROUP BY release_year, category;
+    """
+    assert {:ok, [{_, ref}]} = Parser.parse_postgresql(query)
+    assert :ok = Parser.add_table_selection(ref, "category", "name", :eq, "Horror")
+    expected = """
+    WITH category_year AS (
+      SELECT title, name AS category, release_year
+      FROM film
+      INNER JOIN film_category ON film_category.film_id = film.film_id
+      INNER JOIN category ON film_category.category_id = category.category_id
+      WHERE name = 'Horror'
+    ) SELECT release_year, category, count(*)
+    FROM category_year
+    GROUP BY release_year, category;
+    """
+    assert {:ok, sql} = Parser.to_sql(ref)
+    assert normalize(sql) == normalize(expected)
+  end
+
+  test "adding where clause to COPY command" do
+    query = "COPY movies TO STDOUT;"
+    assert {:ok, [{_, ref}]} = Parser.parse_postgresql(query)
+    assert :ok = Parser.add_table_selection(ref, "movies", "genre", :eq, "Horror")
+    expected = "COPY (SELECT * FROM movies WHERE genre = 'Horror') TO STDOUT;"
+    assert {:ok, sql} = Parser.to_sql(ref)
+    assert normalize(sql) == normalize(expected)
+
+    query = "COPY movies (name) TO STDOUT;"
+    assert {:ok, [{_, ref}]} = Parser.parse_postgresql(query)
+    assert :ok = Parser.add_table_selection(ref, "movies", "genre", :eq, "Horror")
+    expected = "COPY (SELECT name FROM movies WHERE genre = 'Horror') TO STDOUT;"
+    assert {:ok, sql} = Parser.to_sql(ref)
+    assert normalize(sql) == normalize(expected)
+  end
+
+  test "adding where clause to view creation" do
+    query = """
+    CREATE VIEW title_and_category AS
+    SELECT title, name AS category
+    FROM film
+    INNER JOIN film_category ON film_category.film_id = film.film_id
+    INNER JOIN category ON film_category.category_id = category.category_id;
+    """
+    assert {:ok, [{_, ref}]} = Parser.parse_postgresql(query)
+    assert :ok = Parser.add_table_selection(ref, "category", "name", :eq, "Horror")
+    expected = """
+    CREATE VIEW title_and_category AS
+    SELECT title, name AS category
+    FROM film
+    INNER JOIN film_category ON film_category.film_id = film.film_id
+    INNER JOIN category ON film_category.category_id = category.category_id
+    WHERE name = 'Horror';
+    """
+    assert {:ok, sql} = Parser.to_sql(ref)
+    assert normalize(sql) == normalize(expected)
+  end
+
   defp assert_table_select(statement, name) do
     assert %Query{
       body: %Select{

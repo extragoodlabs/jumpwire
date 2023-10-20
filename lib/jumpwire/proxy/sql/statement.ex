@@ -710,6 +710,51 @@ defmodule JumpWire.Proxy.SQL.Statement do
     field :opt_search_modifier, Statement.search_modifier() | nil
   end
 
+  @type copy_target() :: :stdin | :stdout | %{filename: String.t()} | %{command: String.t()}
+  @type copy_option()
+  :: {:format, Ident.t()}
+  | {:freeze, boolean()}
+  | {:delimiter, char()}
+  | {:null, String.t}
+  | {:header, boolean()}
+  | {:quote, char()}
+  | {:escape, char()}
+  | {:force_quote, [Ident.t()]}
+  | {:force_not_null, [Ident.t()]}
+  | {:force_null, [Ident.t()]}
+  | {:encoding, String.t()}
+  @type copy_legacy_option() :: :binary | {:delimiter, char()} | {:null, String.t()} | {:csv, [copy_legacy_csv_option()]}
+  @type copy_legacy_csv_option()
+  :: :header
+  | {:quote, char()}
+  | {:escape, char()}
+  | {:force_quote, [Ident.t()]}
+  | {:force_not_null, [Ident.t()]}
+
+  typedstruct module: Copy do
+    field :source, %{table_name: Statement.object_name(), columns: [Statement.Ident.t()]} | Statement.Query.t()
+    field :to, boolean()
+    field :target, Statement.copy_target()
+    field :options, [Statement.copy_option()]
+    field :legacy_options, [Statement.copy_legacy_csv_option()]
+    field :values, [String.t() | nil]
+  end
+
+  typedstruct module: SqlOption do
+    field :name, Statement.Ident.t()
+    field :value, Statement.value()
+  end
+
+  typedstruct module: CreateView do
+    field :or_replace, boolean()
+    field :materialized, boolean()
+    field :name, Statement.object_name()
+    field :columns, Statement.Ident.t()
+    field :query, Statement.Query.t()
+    field :with_options, [Statement.SqlOption.t()]
+    field :cluster_by, [Statement.Ident.t()]
+  end
+
   @type expr()
   :: Ident.t
   | {:compound_identifier, [Ident.t]}
