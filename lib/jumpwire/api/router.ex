@@ -120,7 +120,7 @@ defmodule JumpWire.API.Router do
     end
   end
 
-  put "/manifests/:mid/proxy-schemas" do
+  post "/manifests/:mid/proxy-schemas" do
     manifest_id = String.downcase(mid)
 
     with {:ok, assertion} <- @sso_module.fetch_active_assertion(conn),

@@ -42,9 +42,9 @@ defmodule JumpWire.Router do
     |> send_resp(200, Jason.encode!(%{message: "Welcome to JumpWire"}))
   end
 
-  forward("/sso", to: JumpWire.SSO.Router)
-  forward("/tokens", to: JumpWire.Token.Router)
-  forward("/api/v1", to: JumpWire.API.Router)
+  forward "/sso", to: JumpWire.SSO.Router
+  forward "/tokens", to: JumpWire.Token.Router
+  forward "/api/v1", to: JumpWire.API.Router
 
   match _ do
     send_resp(conn, 404, "not found")

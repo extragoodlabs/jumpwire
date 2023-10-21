@@ -119,11 +119,10 @@ defmodule JumpWire.Proxy.Schema do
 
   defp denormalize_fields(fields) when is_map(fields) do
     fields
-    |> Enum.map(&denormalize_field/1)
+    |> Stream.map(&denormalize_field/1)
     |> Map.new()
   end
 
-  defp denormalize_fields(fields) when is_list(fields), do: Enum.map(fields, &denormalize_fields/1)
   defp denormalize_fields(value), do: value
 
   defp denormalize_field({"$." <> path, [label]}), do: {path, label}

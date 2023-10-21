@@ -192,7 +192,7 @@ defmodule JumpWire.API.RouterTest do
 
       # add a schema
       conn =
-        conn(:put, "/manifests/#{manifest_id}/proxy-schemas", mock_schema)
+        conn(:post, "/manifests/#{manifest_id}/proxy-schemas", mock_schema)
         |> put_auth_header(token)
         |> Router.call(@opts)
 
@@ -238,7 +238,7 @@ defmodule JumpWire.API.RouterTest do
       mock_schema = JumpWire.API.RouterMocks.proxy_schema("test-schema", manifest_id)
 
       conn =
-        conn(:put, "/manifests/#{manifest_id}/proxy-schemas", mock_schema)
+        conn(:post, "/manifests/#{manifest_id}/proxy-schemas", mock_schema)
         |> put_auth_header(token)
         |> Router.call(@opts)
 
@@ -270,7 +270,7 @@ defmodule JumpWire.API.RouterTest do
 
       # add a schema
       conn =
-        conn(:put, "/manifests/#{manifest_id}/proxy-schemas", mock_schema)
+        conn(:post, "/manifests/#{manifest_id}/proxy-schemas", mock_schema)
         |> put_auth_header(token)
         |> Router.call(@opts)
 
@@ -316,7 +316,7 @@ defmodule JumpWire.API.RouterTest do
 
       # add a schema
       conn =
-        conn(:put, "/manifests/#{manifest_id}/proxy-schemas", mock_schema)
+        conn(:post, "/manifests/#{manifest_id}/proxy-schemas", mock_schema)
         |> put_auth_header(token)
         |> Router.call(@opts)
 
