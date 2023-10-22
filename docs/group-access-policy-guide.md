@@ -20,8 +20,8 @@ In this guide we'll configure JumpWire to allow some groups to be able to query 
 
 As a prerequisite, we [set up Single Sign-On](./sso-guide.md) to connect JumpWire to an Identity Provider. Users will authenticate with their IdP, and the response for a successful authentication will contain a list of groups that the user is a member of. This lets us define permissions at a group level, which aligns with a Role Based Access Control (RBAC) model.
 
-<div style="margin: auto; max-width: 250px">
-  <img src="../images/group_access_policy_guide/jumpwire-idp.svg" alt="JumpWire with Identity Provider" />
+<div style="margin: auto; width: 50%;">
+  <img width="250px" src="../images/group_access_policy_guide/jumpwire-idp.svg" alt="JumpWire with Identity Provider" />
 </div>
 
 #### Labeling fields via configuration
