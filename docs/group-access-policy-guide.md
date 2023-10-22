@@ -93,7 +93,8 @@ groups:
   # map group name: permissions
   # `Engineers` is the name of a group present in the SSO identity provider
   Engineers:
-    # `permissions` is a list of operations that members of the Engineers group can perform
+    # `permissions` is a list of operations that members of the Engineers group can perform on a given label
+    # operation is one of select|update|insert|delete
     permissions:
       - select:pii
       - select:sensitive
