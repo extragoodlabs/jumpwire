@@ -112,11 +112,11 @@ Here's a visual view of the schema we are working with, along with the labels we
 
 ![Schema with labels](../images/group_access_policy_guide/schema_example.svg)
 
-#### Permission breakdown
+### Permissions in action
 
 We've defined the permission structure to allow for the following scenarios:
 
-**Members of "Engineers" group can query all labels, and update `pii` and `sensitive` columns**
+#### Members of "Engineers" group can query all labels, and update `pii` and `sensitive` columns
 
 In effect, this allows engineers to read data from all of the sensitive columns in the database. They can even update the name, email and username columns. However they cannot insert or delete any of these columns, and because the name columns have "not null" constraints, this means that engineers cannot insert new rows or delete existing rows in either table.
 
@@ -156,9 +156,14 @@ ryan=> select * from customer where email = 'perezthomas@hunter.com';
 (1 row)
 ```
 
-The engineer was able to query from Staff and even update columns containing PII, however they were not allowed to insert a new record. Same for Customer.
+The engineer was able to:
+- query from Staff with `select * from staff limit 5;`
+- update columns containing PII with `update staff set first_name = 'Erlic', username = 'Erlic' where staff_id = 3;`
 
-**Members of "Customer Ops" group can only query `pii`, but not read/insert/update/delete any other columns**
+The engineer was blocked from:
+- inserting a new record with `insert into staff values (99, 'Jack', 'Jackson', 1, 'jack@notanemail.org', 1, 'jackjack', 'notapassword');`
+
+#### Members of "Customer Ops" group can only query `pii`, but not read/insert/update/delete any other columns
 
 In effect, this allows customer support to query only specific fields from Customer and Staff. They cannot insert, modify or delete any records, which means they have read-only access to those tables. Let's see how this works with the queries run above.
 
@@ -187,6 +192,15 @@ ERROR:  blocked by JumpWire policy. A request for additional access was generate
     https://stage.jumpwire.io/authorize/61f4e989...
 ```
 
+The customer support rep was able to:
+- query some columns from Staff with `select staff_id, first_name, last_name, username from staff limit 10;`
+
+The customer support rep was blocked from:
+- query columns containing Secret with `select * from staff limit 5;`
+- update columns containing PII with `update staff set first_name = 'Erlic', username = 'Erlic' where staff_id = 3;`
+
 Note that the `select * from staff limit 5;` query failed because it would have returned the column `password` that is labeled `secret`.
 
-Additionally, because neither group have permission to `delete` labels, they aren't able to delete any rows from either table. This is a great safeguard against developers inadvertently running destructive queries in production (which in my experience happens at every company).
+#### Implementing read-only accounts
+
+Because neither group in our example has permission to `delete` labels, they aren't able to delete any rows from either table. In effect, they have read-only permission to those tables. This is a great safeguard against developers inadvertently running destructive queries in production (which in my experience happens at every company).
