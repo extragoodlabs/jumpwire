@@ -37,7 +37,7 @@ defmodule JumpWire.MixProject do
     ]
   end
 
-  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(:test), do: ["lib", "test/support", "test/mocks"]
   defp elixirc_paths(_), do: ["lib"]
 
   defp deps do
@@ -52,8 +52,7 @@ defmodule JumpWire.MixProject do
       {:socket, "~> 0.3"},
       # Using a git reference until a release is pushed containing this PR:
       # https://github.com/J0/phoenix_gen_socket_client/pull/64
-      {:phoenix_gen_socket_client,
-       github: "J0/phoenix_gen_socket_client", ref: "11ca72274437e48e4cbacc713e7e5300dcb78abc"},
+      {:phoenix_gen_socket_client, github: "J0/phoenix_gen_socket_client", ref: "11ca72274437e48e4cbacc713e7e5300dcb78abc"},
       {:websocket_client, "~> 1.5"},
       {:warpath, "~> 0.6.2"},
       {:ex_aws, "~> 2.2.4", override: true},
@@ -136,8 +135,7 @@ defmodule JumpWire.MixProject do
 
   defp aliases do
     [
-      "release.docker":
-        "cmd DOCKER_BUILDKIT=1 docker build -t #{@docker_image}:#{@version} -t #{@docker_image}:latest ."
+      "release.docker": "cmd DOCKER_BUILDKIT=1 docker build -t #{@docker_image}:#{@version} -t #{@docker_image}:latest ."
     ]
   end
 

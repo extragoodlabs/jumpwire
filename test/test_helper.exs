@@ -3,7 +3,6 @@ ExUnit.start(trace: true)
 
 # mock setup
 Mox.defmock(JumpWire.TeslaMock, for: Tesla.Adapter)
-Mox.defmock(JumpWire.SSO.MockImpl, for: JumpWire.SSO)
 
 Excontainers.ResourcesReaper.start_link()
 
