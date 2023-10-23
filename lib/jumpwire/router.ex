@@ -3,15 +3,17 @@ defmodule JumpWire.Router do
   use Honeybadger.Plug
   require Logger
 
-  if Mix.env == :dev or Mix.env == :test do
+  if Mix.env() == :dev or Mix.env() == :test do
     use Plug.Debugger
   end
 
   plug :match
   plug :fetch_query_params
+
   plug Plug.Parsers,
     parsers: [{:json, json_decoder: Jason}],
     pass: ["*/*"]
+
   plug :dispatch
 
   get "/.well-known/acme-challenge/:token" do

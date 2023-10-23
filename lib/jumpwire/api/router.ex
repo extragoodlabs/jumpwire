@@ -120,6 +120,87 @@ defmodule JumpWire.API.Router do
     end
   end
 
+  post "/manifests/:mid/proxy-schemas" do
+    manifest_id = String.downcase(mid)
+
+    with {:ok, assertion} <- @sso_module.fetch_active_assertion(conn),
+         uuid <- Uniq.UUID.uuid4(),
+         {:ok, raw_schema} <-
+           conn.body_params
+           |> Map.put("id", uuid)
+           |> Map.put("manifest_id", manifest_id)
+           |> JumpWire.Proxy.Schema.from_json(assertion.computed.org_id),
+         _ <- JumpWire.Proxy.Schema.put(assertion.computed.org_id, raw_schema),
+         {:ok, schema} <- JumpWire.Proxy.Schema.fetch(assertion.computed.org_id, manifest_id, uuid) do
+      schema = %JumpWire.Proxy.Schema{schema | fields: JumpWire.Proxy.Schema.denormalize_schema_fields(schema)}
+      send_json_resp(conn, 201, schema)
+    else
+      :error ->
+        send_json_resp(conn, 401, %{error: "SSO login required"})
+
+      {:error, reason} ->
+        Logger.error("Failed to process schema: #{inspect(reason)}")
+        send_resp(conn, 400, "Failed to process schema")
+
+      _ ->
+        send_json_resp(conn, 500, %{error: "Failed to create schema"})
+    end
+  end
+
+  get "/manifests/:mid/proxy-schemas" do
+    manifest_id = String.downcase(mid)
+
+    with {:ok, assertion} <- @sso_module.fetch_active_assertion(conn),
+         schemas <- JumpWire.Proxy.Schema.list_all(assertion.computed.org_id, manifest_id) do
+      schemas =
+        Enum.map(schemas, fn s ->
+          %JumpWire.Proxy.Schema{s | fields: JumpWire.Proxy.Schema.denormalize_schema_fields(s)}
+        end)
+
+      send_json_resp(conn, 200, schemas)
+    else
+      :error ->
+        send_json_resp(conn, 401, %{error: "SSO login required"})
+
+      _ ->
+        send_json_resp(conn, 404, %{error: "Proxy Schemas not found"})
+    end
+  end
+
+  get "/manifests/:mid/proxy-schemas/:id" do
+    manifest_id = String.downcase(mid)
+    proxy_schema_id = String.downcase(id)
+
+    with {:ok, assertion} <- @sso_module.fetch_active_assertion(conn),
+         {:ok, schema} <- JumpWire.Proxy.Schema.fetch(assertion.computed.org_id, manifest_id, proxy_schema_id) do
+      schema = %JumpWire.Proxy.Schema{schema | fields: JumpWire.Proxy.Schema.denormalize_schema_fields(schema)}
+      send_json_resp(conn, 200, schema)
+    else
+      {:error, :not_found} ->
+        send_json_resp(conn, 404, %{error: "Proxy Schema not found"})
+
+      :error ->
+        send_json_resp(conn, 401, %{error: "SSO login required"})
+
+      _ ->
+        send_json_resp(conn, 404, %{error: "Proxy Schema not found"})
+    end
+  end
+
+  delete "/manifests/:mid/proxy-schemas/:id" do
+    manifest_id = String.downcase(mid)
+    proxy_schema_id = String.downcase(id)
+
+    case @sso_module.fetch_active_assertion(conn) do
+      {:ok, assertion} ->
+        JumpWire.Proxy.Schema.delete(assertion.computed.org_id, manifest_id, proxy_schema_id)
+        send_json_resp(conn, 200, %{message: "Proxt Schema deleted"})
+
+      _ ->
+        send_json_resp(conn, 401, %{error: "SSO login required"})
+    end
+  end
+
   get "/auth/:token" do
     with {:ok, assertion} <- @sso_module.fetch_active_assertion(conn),
          {:ok, {_nonce, type}} <- Token.verify_jit_auth_request(token) do
