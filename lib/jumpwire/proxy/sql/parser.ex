@@ -163,6 +163,11 @@ defmodule JumpWire.Proxy.SQL.Parser do
     {:ok, acc.request}
   end
 
+  def to_request(%Statement.CreateView{query: query}) do
+    acc = %Traveler{op: :select} |> find_fields(query)
+    {:ok, acc.request}
+  end
+
   def to_request(_), do: {:error, :invalid}
 
   def find_fields(acc, query = %Statement.Query{}) do

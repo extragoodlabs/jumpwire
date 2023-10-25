@@ -860,6 +860,30 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     ]
   end
 
+  test "parsing field in CREATE VIEW" do
+    query = """
+    CREATE VIEW title_and_category AS
+    SELECT title, name AS category
+    FROM film
+    INNER JOIN film_category ON film_category.film_id = film.film_id
+    INNER JOIN category ON film_category.category_id = category.category_id;
+    """
+    assert {:ok, [statement]} = parse_query(query)
+    assert {:ok, request} = Parser.to_request(statement)
+    assert request.select == [
+      %Field{table: "film_category", column: "name"},
+      %Field{table: "category", column: "name"},
+      %Field{table: "film", column: "name"},
+      %Field{table: "film_category", column: "title"},
+      %Field{table: "category", column: "title"},
+      %Field{table: "film", column: "title"},
+      %Field{table: "category", column: "category_id"},
+      %Field{table: "film_category", column: "category_id"},
+      %Field{table: "film", column: "film_id"},
+      %Field{table: "film_category", column: "film_id"},
+    ]
+  end
+
   test "adding where clause to a query" do
     query = "SELECT * FROM weather"
     assert {:ok, [{_, ref}]} = Parser.parse_postgresql(query)
