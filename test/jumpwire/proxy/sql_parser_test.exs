@@ -844,6 +844,22 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     ]
   end
 
+  test "parsing field in COPY command" do
+    query = "COPY movies TO STDOUT;"
+    assert {:ok, [statement]} = parse_query(query)
+    assert {:ok, request} = Parser.to_request(statement)
+    assert request.select == [
+      %Field{table: "movies", column: :wildcard},
+    ]
+
+    query = "COPY movies (name) TO STDOUT;"
+    assert {:ok, [statement]} = parse_query(query)
+    assert {:ok, request} = Parser.to_request(statement)
+    assert request.select == [
+      %Field{table: "movies", column: "name"},
+    ]
+  end
+
   test "adding where clause to a query" do
     query = "SELECT * FROM weather"
     assert {:ok, [{_, ref}]} = Parser.parse_postgresql(query)
