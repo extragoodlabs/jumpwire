@@ -158,6 +158,11 @@ defmodule JumpWire.Proxy.SQL.Parser do
   def to_request(%Statement.SetVariable{}), do: {:ok, %Request{}}
   def to_request(%Statement.SetTimeZone{}), do: {:ok, %Request{}}
 
+  def to_request(%Statement.Copy{source: source}) do
+    acc = %Traveler{op: :select} |> find_fields(source)
+    {:ok, acc.request}
+  end
+
   def to_request(_), do: {:error, :invalid}
 
   def find_fields(acc, query = %Statement.Query{}) do
@@ -432,6 +437,20 @@ defmodule JumpWire.Proxy.SQL.Parser do
 
   def find_fields(acc, %Statement.MatchAgainst{columns: cols}), do: find_fields(acc, cols)
   def find_fields(acc, %Statement.CompositeAccess{expr: expr}), do: find_fields(acc, expr)
+
+  # The Copy statement source conflicts with another Table struct,
+  # preventing easy matching on the struct object
+  def find_fields(
+    acc,
+    %{__struct__: Statement.Table, columns: cols, table_name: table}
+  ) do
+    acc = find_table(acc, table)
+
+    case cols do
+      [] -> Traveler.put_field(acc, %Field{column: :wildcard})
+      _ -> Enum.reduce(cols, acc, fn c, acc -> find_fields(acc, c) end)
+    end
+  end
 
   def find_fields(acc, [expr]), do: find_fields(acc, expr)
 
