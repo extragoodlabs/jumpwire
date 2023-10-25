@@ -16,7 +16,7 @@ We will be setting up the simple architecture diagrammed below, using Terraform.
 
 It launches the JumpWire gateway as an ECS task running on Fargate, a full serverless setup. The ECS task also runs in a private subnet of the VPC along with the database. A Network Load Balancer listens for connections from the Internet, and forwards them to our gateway task. A DNS hostname is associated with the Load Balancer using Route53.
 
-This guide assumes there is an existing VPC created with public and private subnets. It will create an RDS instance in the private subnet along with the JumpWire gateway for demonstration purposes.
+This guide assumes there is an existing VPC created with public and private subnets. It will create an RDS instance in the private subnet along with the JumpWire gateway, but you can use an existing database if you are launching into a live environment.
 
 ![AWS Architecture](../images/rds-gateway.svg)
 
@@ -55,28 +55,7 @@ The guide creates security groups to restrict traffic between the Internet and o
 
 ![Security Group Configuration](../images/rds-gateway-security-groups.svg)
 
-It may be necessary to add additional ingress rules to the RDS security group to allow other applications the ability to connect to it.
-
-```terraform
-resource "aws_security_group" "rds_service" {
-  name        = "rds_service"
-  description = "Allow PG inbound traffic from ECS"
-  vpc_id      = var.vpc_id
-
-  ingress {
-    description     = "PG from ECS JumpWire task"
-    from_port       = 5432
-    to_port         = 5432
-    protocol        = "tcp"
-    # Add additional security groups for other applications to connect
-    security_groups = [aws_security_group.ecs_service.id]
-  }
-
-  egress {
-    # ...
-  }
-}
-```
+It may be necessary to add additional ingress rules to the RDS security group to allow other applications the ability to connect directly to the database. However this is not strictly necessary, as you can connect everything through JumpWire!
 
 ### RDS instance
 
@@ -89,16 +68,8 @@ This guide creates a new RDS instance, but in most cases we already have an RDS 
 # All we need is the username/password/hostname to configure the gateway container.
 #
 
-resource "aws_db_subnet_group" "test_db_subnet_group" {
-  name       = "test_db_subnet_group"
-  subnet_ids = var.vpc_private_subnet_ids
-}
-
-resource "aws_db_instance" "test_db" {
-  instance_class         = "db.t3.micro"
-  allocated_storage      = 10
-  db_name                = "test_db"
-# ...
+data "aws_db_instance" "test_db" {
+  db_instance_identifier = "test_db"
 }
 ```
 
@@ -108,8 +79,12 @@ The database credentials that JumpWire will use to connect to RDS are referenced
 locals {
   root_dir       = path.module
   aws_account_id = data.aws_caller_identity.current.account_id
+  # Create username and random password when creating a new RDS instance
   rds_username   = "jumpwire"
   rds_password   = random_password.db_password.result
+  # If using an existing RDS instance, load username/password from data source
+  # rds_username     = data.aws_db_instance.test_db.master_username
+  # rds_username     = data.aws_db_instance.test_db.master_user_secret
 
   token_secret = {
     JUMPWIRE_ROOT_TOKEN     = "${var.jumpwire_root_token}"
