@@ -30,8 +30,10 @@ defmodule JumpWire.ETS do
         put(table, {org_id, id}, value)
       end
 
+      @spec put(atom(), String.t(), any()) :: {:ok, any()}
       def put(table, key, value) do
         DeltaCrdt.put(@crdt, {table, key}, value)
+        {:ok, value}
       end
 
       @doc """
