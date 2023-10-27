@@ -35,4 +35,11 @@ defmodule JumpWire.API.RouterMocks do
       }
     }
   end
+
+  def client_auth(name, manifest_id) do
+    %{
+      "name" => name,
+      "manifest_id" => manifest_id
+    }
+  end
 end

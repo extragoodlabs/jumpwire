@@ -175,7 +175,7 @@ defmodule JumpWire.API.ManifestRouterTest do
     end
   end
 
-  describe "//:mid/proxy-schemas" do
+  describe "/:mid/proxy-schemas" do
     test "GET returns a 200 status with valid SSO" do
       mock_manifest = JumpWire.API.RouterMocks.manifest("test-manifest")
 
@@ -341,6 +341,170 @@ defmodule JumpWire.API.ManifestRouterTest do
 
       conn =
         conn(:get, "/#{manifest_id}/proxy-schemas/#{schema["id"]}")
+        |> put_auth_header(token)
+        |> ManifestRouter.call(@opts)
+
+      assert conn.status == 404
+    end
+  end
+
+  describe "/:mid/client-auths" do
+    test "GET returns a 200 status with valid SSO" do
+      mock_manifest = JumpWire.API.RouterMocks.manifest("test-manifest")
+
+      expect(JumpWire.SSO.MockImpl, :fetch_active_assertion, 3, fn _ ->
+        {:ok, %{computed: %{org_id: "test-org-id"}}}
+      end)
+
+      {:ok, manifest} = add_manifest(mock_manifest)
+
+      token = JumpWire.API.Token.get_root_token()
+      manifest_id = manifest["id"]
+
+      mock_client_auth = JumpWire.API.RouterMocks.client_auth("test-client-auth", manifest_id)
+
+      # add a client_auth
+      conn =
+        conn(:post, "/#{manifest_id}/client-auths", mock_client_auth)
+        |> put_auth_header(token)
+        |> ManifestRouter.call(@opts)
+
+      assert conn.status == 201
+
+      # get the client_auths
+      conn =
+        conn(:get, "/#{manifest_id}/client-auths")
+        |> put_auth_header(token)
+        |> ManifestRouter.call(@opts)
+
+      assert conn.status == 200
+
+      case Jason.decode(conn.resp_body) do
+        {:ok, body} ->
+          assert length(body) == 1
+          body = hd(body)
+
+          assert body["name"] == mock_client_auth["name"]
+          assert body["id"] != nil
+          assert body["manifest_id"] == manifest_id
+
+        {:error, _} ->
+          assert false
+      end
+    end
+
+    test "PUT returns a 201 status with valid input" do
+      mock_manifest = JumpWire.API.RouterMocks.manifest("test-manifest")
+
+      expect(JumpWire.SSO.MockImpl, :fetch_active_assertion, 2, fn _ ->
+        {:ok, %{computed: %{org_id: "test-org-id"}}}
+      end)
+
+      {:ok, manifest} = add_manifest(mock_manifest)
+
+      token = JumpWire.API.Token.get_root_token()
+      manifest_id = manifest["id"]
+
+      mock_client_auth = JumpWire.API.RouterMocks.client_auth("test-client-auth", manifest_id)
+
+      conn =
+        conn(:post, "/#{manifest_id}/client-auths", mock_client_auth)
+        |> put_auth_header(token)
+        |> ManifestRouter.call(@opts)
+
+      assert conn.status == 201
+
+      {:ok, client_auth} = Jason.decode(conn.resp_body)
+
+      assert client_auth["name"] == mock_client_auth["name"]
+      assert client_auth["id"] != nil
+      assert client_auth["manifest_id"] == manifest_id
+    end
+
+    test "GET /:id returns a 200 status with a valid client_auth ID" do
+      mock_manifest = JumpWire.API.RouterMocks.manifest("test-manifest")
+
+      expect(JumpWire.SSO.MockImpl, :fetch_active_assertion, 3, fn _ ->
+        {:ok, %{computed: %{org_id: "test-org-id"}}}
+      end)
+
+      {:ok, manifest} = add_manifest(mock_manifest)
+
+      token = JumpWire.API.Token.get_root_token()
+      manifest_id = manifest["id"]
+
+      mock_client_auth = JumpWire.API.RouterMocks.client_auth("test-client-auth", manifest_id)
+
+      # add a client_auth
+      conn =
+        conn(:post, "/#{manifest_id}/client-auths", mock_client_auth)
+        |> put_auth_header(token)
+        |> ManifestRouter.call(@opts)
+
+      assert conn.status == 201
+
+      {:ok, client_auth} = Jason.decode(conn.resp_body)
+
+      # get the client_auths
+      conn =
+        conn(:get, "/#{manifest_id}/client-auths/#{client_auth["id"]}")
+        |> put_auth_header(token)
+        |> ManifestRouter.call(@opts)
+
+      assert conn.status == 200
+
+      case Jason.decode(conn.resp_body) do
+        {:ok, body} ->
+          assert body["name"] == mock_client_auth["name"]
+          assert body["id"] != nil
+          assert body["manifest_id"] == manifest_id
+
+        {:error, _} ->
+          assert false
+      end
+    end
+
+    test "DELETE /:id returns a 200 status with valid client_auth ID" do
+      mock_manifest = JumpWire.API.RouterMocks.manifest("test-manifest")
+
+      expect(JumpWire.SSO.MockImpl, :fetch_active_assertion, 5, fn _ ->
+        {:ok, %{computed: %{org_id: "test-org-id"}}}
+      end)
+
+      {:ok, manifest} = add_manifest(mock_manifest)
+
+      token = JumpWire.API.Token.get_root_token()
+      manifest_id = manifest["id"]
+
+      mock_client_auth = JumpWire.API.RouterMocks.client_auth("test-client-auth", manifest_id)
+
+      # add a client_auth
+      conn =
+        conn(:post, "/#{manifest_id}/client-auths", mock_client_auth)
+        |> put_auth_header(token)
+        |> ManifestRouter.call(@opts)
+
+      assert conn.status == 201
+
+      {:ok, client_auth} = Jason.decode(conn.resp_body)
+
+      # get the client_auths
+      conn =
+        conn(:get, "/#{manifest_id}/client-auths/#{client_auth["id"]}")
+        |> put_auth_header(token)
+        |> ManifestRouter.call(@opts)
+
+      assert conn.status == 200
+
+      conn =
+        conn(:delete, "/#{manifest_id}/client-auths/#{client_auth["id"]}")
+        |> put_auth_header(token)
+        |> ManifestRouter.call(@opts)
+
+      assert conn.status == 200
+
+      conn =
+        conn(:get, "/#{manifest_id}/client-auths/#{client_auth["id"]}")
         |> put_auth_header(token)
         |> ManifestRouter.call(@opts)
 
