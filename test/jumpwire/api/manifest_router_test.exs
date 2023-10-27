@@ -1,10 +1,10 @@
-defmodule JumpWire.API.RouterTest do
+defmodule JumpWire.API.ManifestRouterTest do
   use ExUnit.Case, async: true
   use Plug.Test
   import Mox
-  alias JumpWire.API.Router
+  alias JumpWire.API.ManifestRouter
 
-  @opts Router.init([])
+  @opts ManifestRouter.init([])
 
   # Ensure tests are run such that they can use the mock
   setup :verify_on_exit!
@@ -18,7 +18,7 @@ defmodule JumpWire.API.RouterTest do
     :ok
   end
 
-  describe "/manifests" do
+  describe "/" do
     test "GET returns a 200 status with valid SSO" do
       mock_manifest = JumpWire.API.RouterMocks.manifest("test-manifest")
 
@@ -28,14 +28,14 @@ defmodule JumpWire.API.RouterTest do
 
       token = JumpWire.API.Token.get_root_token()
 
-      conn(:put, "/manifests", mock_manifest)
+      conn(:put, "/", mock_manifest)
       |> put_auth_header(token)
-      |> Router.call(@opts)
+      |> ManifestRouter.call(@opts)
 
       conn =
-        conn(:get, "/manifests")
+        conn(:get, "/")
         |> put_auth_header(token)
-        |> Router.call(@opts)
+        |> ManifestRouter.call(@opts)
 
       assert conn.status == 200
 
@@ -61,24 +61,24 @@ defmodule JumpWire.API.RouterTest do
       token = JumpWire.API.Token.get_root_token()
 
       conn =
-        conn(:get, "/manifests")
+        conn(:get, "/")
         |> put_auth_header(token)
-        |> Router.call(@opts)
+        |> ManifestRouter.call(@opts)
 
       assert conn.status == 200
       assert conn.resp_body == "[]"
 
       conn =
-        conn(:put, "/manifests", mock_manifest)
+        conn(:put, "/", mock_manifest)
         |> put_auth_header(token)
-        |> Router.call(@opts)
+        |> ManifestRouter.call(@opts)
 
       assert conn.status == 201
 
       conn =
-        conn(:get, "/manifests")
+        conn(:get, "/")
         |> put_auth_header(token)
-        |> Router.call(@opts)
+        |> ManifestRouter.call(@opts)
 
       case Jason.decode(conn.resp_body) do
         {:ok, body} ->
@@ -102,9 +102,9 @@ defmodule JumpWire.API.RouterTest do
       token = JumpWire.API.Token.get_root_token()
 
       conn =
-        conn(:put, "/manifests", mock_manifest)
+        conn(:put, "/", mock_manifest)
         |> put_auth_header(token)
-        |> Router.call(@opts)
+        |> ManifestRouter.call(@opts)
 
       assert conn.status == 201
 
@@ -113,9 +113,9 @@ defmodule JumpWire.API.RouterTest do
           manifest_id = body["id"]
 
           conn =
-            conn(:get, "/manifests/#{manifest_id}")
+            conn(:get, "/#{manifest_id}")
             |> put_auth_header(token)
-            |> Router.call(@opts)
+            |> ManifestRouter.call(@opts)
 
           assert conn.status == 200
 
@@ -142,9 +142,9 @@ defmodule JumpWire.API.RouterTest do
       token = JumpWire.API.Token.get_root_token()
 
       conn =
-        conn(:put, "/manifests", mock_manifest)
+        conn(:put, "/", mock_manifest)
         |> put_auth_header(token)
-        |> Router.call(@opts)
+        |> ManifestRouter.call(@opts)
 
       assert conn.status == 201
 
@@ -153,29 +153,29 @@ defmodule JumpWire.API.RouterTest do
       manifest_id = manifest["id"]
 
       conn =
-        conn(:get, "/manifests/#{manifest_id}")
+        conn(:get, "/#{manifest_id}")
         |> put_auth_header(token)
-        |> Router.call(@opts)
+        |> ManifestRouter.call(@opts)
 
       assert conn.status == 200
 
       conn =
-        conn(:delete, "/manifests/#{manifest_id}")
+        conn(:delete, "/#{manifest_id}")
         |> put_auth_header(token)
-        |> Router.call(@opts)
+        |> ManifestRouter.call(@opts)
 
       assert conn.status == 200
 
       conn =
-        conn(:get, "/manifests/#{manifest_id}")
+        conn(:get, "/#{manifest_id}")
         |> put_auth_header(token)
-        |> Router.call(@opts)
+        |> ManifestRouter.call(@opts)
 
       assert conn.status == 404
     end
   end
 
-  describe "/manifests/:mid/proxy-schemas" do
+  describe "//:mid/proxy-schemas" do
     test "GET returns a 200 status with valid SSO" do
       mock_manifest = JumpWire.API.RouterMocks.manifest("test-manifest")
 
@@ -192,17 +192,17 @@ defmodule JumpWire.API.RouterTest do
 
       # add a schema
       conn =
-        conn(:post, "/manifests/#{manifest_id}/proxy-schemas", mock_schema)
+        conn(:post, "/#{manifest_id}/proxy-schemas", mock_schema)
         |> put_auth_header(token)
-        |> Router.call(@opts)
+        |> ManifestRouter.call(@opts)
 
       assert conn.status == 201
 
       # get the schemas
       conn =
-        conn(:get, "/manifests/#{manifest_id}/proxy-schemas")
+        conn(:get, "/#{manifest_id}/proxy-schemas")
         |> put_auth_header(token)
-        |> Router.call(@opts)
+        |> ManifestRouter.call(@opts)
 
       assert conn.status == 200
 
@@ -238,9 +238,9 @@ defmodule JumpWire.API.RouterTest do
       mock_schema = JumpWire.API.RouterMocks.proxy_schema("test-schema", manifest_id)
 
       conn =
-        conn(:post, "/manifests/#{manifest_id}/proxy-schemas", mock_schema)
+        conn(:post, "/#{manifest_id}/proxy-schemas", mock_schema)
         |> put_auth_header(token)
-        |> Router.call(@opts)
+        |> ManifestRouter.call(@opts)
 
       assert conn.status == 201
 
@@ -270,9 +270,9 @@ defmodule JumpWire.API.RouterTest do
 
       # add a schema
       conn =
-        conn(:post, "/manifests/#{manifest_id}/proxy-schemas", mock_schema)
+        conn(:post, "/#{manifest_id}/proxy-schemas", mock_schema)
         |> put_auth_header(token)
-        |> Router.call(@opts)
+        |> ManifestRouter.call(@opts)
 
       assert conn.status == 201
 
@@ -280,9 +280,9 @@ defmodule JumpWire.API.RouterTest do
 
       # get the schemas
       conn =
-        conn(:get, "/manifests/#{manifest_id}/proxy-schemas/#{schema["id"]}")
+        conn(:get, "/#{manifest_id}/proxy-schemas/#{schema["id"]}")
         |> put_auth_header(token)
-        |> Router.call(@opts)
+        |> ManifestRouter.call(@opts)
 
       assert conn.status == 200
 
@@ -316,9 +316,9 @@ defmodule JumpWire.API.RouterTest do
 
       # add a schema
       conn =
-        conn(:post, "/manifests/#{manifest_id}/proxy-schemas", mock_schema)
+        conn(:post, "/#{manifest_id}/proxy-schemas", mock_schema)
         |> put_auth_header(token)
-        |> Router.call(@opts)
+        |> ManifestRouter.call(@opts)
 
       assert conn.status == 201
 
@@ -326,23 +326,23 @@ defmodule JumpWire.API.RouterTest do
 
       # get the schemas
       conn =
-        conn(:get, "/manifests/#{manifest_id}/proxy-schemas/#{schema["id"]}")
+        conn(:get, "/#{manifest_id}/proxy-schemas/#{schema["id"]}")
         |> put_auth_header(token)
-        |> Router.call(@opts)
+        |> ManifestRouter.call(@opts)
 
       assert conn.status == 200
 
       conn =
-        conn(:delete, "/manifests/#{manifest_id}/proxy-schemas/#{schema["id"]}")
+        conn(:delete, "/#{manifest_id}/proxy-schemas/#{schema["id"]}")
         |> put_auth_header(token)
-        |> Router.call(@opts)
+        |> ManifestRouter.call(@opts)
 
       assert conn.status == 200
 
       conn =
-        conn(:get, "/manifests/#{manifest_id}/proxy-schemas/#{schema["id"]}")
+        conn(:get, "/#{manifest_id}/proxy-schemas/#{schema["id"]}")
         |> put_auth_header(token)
-        |> Router.call(@opts)
+        |> ManifestRouter.call(@opts)
 
       assert conn.status == 404
     end
@@ -364,9 +364,9 @@ defmodule JumpWire.API.RouterTest do
     token = JumpWire.API.Token.get_root_token()
 
     conn =
-      conn(:put, "/manifests", manifest)
+      conn(:put, "/", manifest)
       |> put_auth_header(token)
-      |> Router.call(@opts)
+      |> ManifestRouter.call(@opts)
 
     Jason.decode(conn.resp_body)
   end
