@@ -252,6 +252,9 @@ defmodule JumpWire.API.ManifestRouterTest do
 
       mock_schema_fields_count = mock_schema["fields"] |> Map.keys() |> length()
       assert schema["fields"] |> Map.keys() |> length() == mock_schema_fields_count
+    end
+
+    test "GET /:id returns a 200 status with a valid schema ID" do
       mock_manifest = JumpWire.API.RouterMocks.manifest("test-manifest")
 
       expect(JumpWire.SSO.MockImpl, :fetch_active_assertion, 3, fn _ ->
@@ -413,6 +416,7 @@ defmodule JumpWire.API.ManifestRouterTest do
 
       {:ok, client_auth} = Jason.decode(conn.resp_body)
 
+      assert client_auth["name"] == mock_client_auth["name"]
       assert client_auth["id"] != nil
       assert client_auth["manifest_id"] == manifest_id
     end
