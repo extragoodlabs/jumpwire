@@ -44,6 +44,7 @@ defmodule JumpWire.Router do
 
   forward "/sso", to: JumpWire.SSO.Router
   forward "/tokens", to: JumpWire.Token.Router
+  forward "/api/v1/manifests", to: JumpWire.API.ManifestRouter
   forward "/api/v1", to: JumpWire.API.Router
 
   match _ do
