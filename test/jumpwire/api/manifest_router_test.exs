@@ -194,7 +194,7 @@ defmodule JumpWire.API.ManifestRouterTest do
       conn =
         conn(:post, "/#{manifest_id}/proxy-schemas", mock_schema)
         |> put_auth_header(token)
-        |> Router.call(@opts)
+        |> ManifestRouter.call(@opts)
 
       assert conn.status == 201
 
@@ -202,7 +202,7 @@ defmodule JumpWire.API.ManifestRouterTest do
       conn =
         conn(:get, "/#{manifest_id}/proxy-schemas")
         |> put_auth_header(token)
-        |> Router.call(@opts)
+        |> ManifestRouter.call(@opts)
 
       assert conn.status == 200
 
@@ -240,7 +240,7 @@ defmodule JumpWire.API.ManifestRouterTest do
       conn =
         conn(:post, "/#{manifest_id}/proxy-schemas", mock_schema)
         |> put_auth_header(token)
-        |> Router.call(@opts)
+        |> ManifestRouter.call(@opts)
 
       assert conn.status == 201
 
@@ -269,7 +269,7 @@ defmodule JumpWire.API.ManifestRouterTest do
       conn =
         conn(:post, "/#{manifest_id}/proxy-schemas", mock_schema)
         |> put_auth_header(token)
-        |> Router.call(@opts)
+        |> ManifestRouter.call(@opts)
 
       assert conn.status == 201
 
@@ -279,7 +279,7 @@ defmodule JumpWire.API.ManifestRouterTest do
       conn =
         conn(:get, "/#{manifest_id}/proxy-schemas/#{schema["id"]}")
         |> put_auth_header(token)
-        |> Router.call(@opts)
+        |> ManifestRouter.call(@opts)
 
       assert conn.status == 200
 
@@ -315,7 +315,7 @@ defmodule JumpWire.API.ManifestRouterTest do
       conn =
         conn(:post, "/#{manifest_id}/proxy-schemas", mock_schema)
         |> put_auth_header(token)
-        |> Router.call(@opts)
+        |> ManifestRouter.call(@opts)
 
       assert conn.status == 201
 
@@ -325,21 +325,21 @@ defmodule JumpWire.API.ManifestRouterTest do
       conn =
         conn(:get, "/#{manifest_id}/proxy-schemas/#{schema["id"]}")
         |> put_auth_header(token)
-        |> Router.call(@opts)
+        |> ManifestRouter.call(@opts)
 
       assert conn.status == 200
 
       conn =
         conn(:delete, "/#{manifest_id}/proxy-schemas/#{schema["id"]}")
         |> put_auth_header(token)
-        |> Router.call(@opts)
+        |> ManifestRouter.call(@opts)
 
       assert conn.status == 200
 
       conn =
         conn(:get, "/#{manifest_id}/proxy-schemas/#{schema["id"]}")
         |> put_auth_header(token)
-        |> Router.call(@opts)
+        |> ManifestRouter.call(@opts)
 
       assert conn.status == 404
     end
