@@ -31,19 +31,9 @@ defmodule JumpWire.API.GroupsRouter do
   plug :dispatch
 
   get "/" do
-    type = Map.get(conn.query_params, "type")
-
     case @sso_module.fetch_active_assertion(conn) do
       {:ok, assertion} ->
-        body =
-          if type do
-            JumpWire.Manifest.get_by_type(assertion.computed.org_id, String.downcase(type))
-            |> Stream.map(fn m -> {m.id, m.name} end)
-            |> Map.new()
-          else
-            JumpWire.Manifest.all(assertion.computed.org_id)
-          end
-
+        body = JumpWire.Group.list_all(assertion.computed.org_id)
         send_json_resp(conn, 200, body)
 
       _ ->
@@ -51,26 +41,24 @@ defmodule JumpWire.API.GroupsRouter do
     end
   end
 
-  put "/" do
+  post "/" do
     with {:ok, assertion} <- @sso_module.fetch_active_assertion(conn),
          uuid <- Uniq.UUID.uuid4(),
-         {:ok, manifest} <-
-           conn.body_params
-           |> Map.put("id", uuid)
-           |> JumpWire.Manifest.from_json(assertion.computed.org_id),
-         _ <- JumpWire.Manifest.put(assertion.computed.org_id, manifest),
-         {:ok, manifest} <- JumpWire.Manifest.fetch(assertion.computed.org_id, manifest.id) do
-      send_json_resp(conn, 201, manifest)
+         updated <- conn.body_params |> Map.put("id", uuid),
+         {:ok, group} <- JumpWire.Group.from_json({updated["name"], updated}, assertion.computed.org_id),
+         {:ok, group} <- JumpWire.Group.put(assertion.computed.org_id, group) do
+      send_json_resp(conn, 201, group)
     else
       :error ->
         send_json_resp(conn, 401, %{error: "SSO login required"})
 
       {:error, reason} ->
-        Logger.error("Failed to process manifest: #{inspect(reason)}")
-        send_resp(conn, 400, "Failed to process manifest")
+        Logger.error("Failed to process group: #{inspect(reason)}")
+        send_resp(conn, 400, "Failed to process group")
 
-      _ ->
-        send_json_resp(conn, 500, %{error: "Failed to create manifest"})
+      error ->
+        Logger.error("Failed to create group: #{inspect(error)}")
+        send_json_resp(conn, 500, %{error: "Failed to create group"})
     end
   end
 
@@ -78,14 +66,14 @@ defmodule JumpWire.API.GroupsRouter do
     id = String.downcase(id)
 
     with {:ok, assertion} <- @sso_module.fetch_active_assertion(conn),
-         {:ok, manifest} <- JumpWire.Manifest.fetch(assertion.computed.org_id, id) do
-      send_json_resp(conn, 200, manifest)
+         {:ok, group} <- JumpWire.Group.fetch(assertion.computed.org_id, id) do
+      send_json_resp(conn, 200, group)
     else
       :error ->
         send_json_resp(conn, 401, %{error: "SSO login required"})
 
-      _ ->
-        send_json_resp(conn, 404, %{error: "Manifest not found"})
+      {:error, message} ->
+        send_json_resp(conn, 404, %{error: "Group not found"})
     end
   end
 
@@ -94,8 +82,8 @@ defmodule JumpWire.API.GroupsRouter do
 
     case @sso_module.fetch_active_assertion(conn) do
       {:ok, assertion} ->
-        JumpWire.Manifest.delete(assertion.computed.org_id, id)
-        send_json_resp(conn, 200, %{message: "Manifest deleted"})
+        JumpWire.Group.delete(assertion.computed.org_id, id)
+        send_json_resp(conn, 200, %{message: "Group deleted"})
 
       _ ->
         send_json_resp(conn, 401, %{error: "SSO login required"})
