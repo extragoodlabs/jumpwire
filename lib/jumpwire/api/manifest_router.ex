@@ -183,6 +183,80 @@ defmodule JumpWire.API.ManifestRouter do
     end
   end
 
+  post "/:mid/client-auths" do
+    manifest_id = String.downcase(mid)
+
+    with {:ok, assertion} <- @sso_module.fetch_active_assertion(conn),
+         uuid <- Uniq.UUID.uuid4(),
+         {:ok, raw_client_auth} <-
+           conn.body_params
+           |> Map.put("id", uuid)
+           |> Map.put("manifest_id", manifest_id)
+           |> JumpWire.ClientAuth.from_json(assertion.computed.org_id),
+         _ <- JumpWire.ClientAuth.put(assertion.computed.org_id, raw_client_auth),
+         {:ok, client_auth} <- JumpWire.ClientAuth.fetch(assertion.computed.org_id, manifest_id, uuid) do
+      send_json_resp(conn, 201, client_auth)
+    else
+      :error ->
+        send_json_resp(conn, 401, %{error: "SSO login required"})
+
+      {:error, reason} ->
+        Logger.error("Failed to process client auth: #{inspect(reason)}")
+        send_resp(conn, 400, "Failed to process client auth")
+
+      _ ->
+        send_json_resp(conn, 500, %{error: "Failed to create client auth"})
+    end
+  end
+
+  get "/:mid/client-auths" do
+    manifest_id = String.downcase(mid)
+
+    with {:ok, assertion} <- @sso_module.fetch_active_assertion(conn),
+         client_auths <- JumpWire.ClientAuth.list_all(assertion.computed.org_id, manifest_id) do
+      send_json_resp(conn, 200, client_auths)
+    else
+      :error ->
+        send_json_resp(conn, 401, %{error: "SSO login required"})
+
+      _ ->
+        send_json_resp(conn, 404, %{error: "Client auths not found"})
+    end
+  end
+
+  get "/:mid/client-auths/:id" do
+    manifest_id = String.downcase(mid)
+    client_auth_id = String.downcase(id)
+
+    with {:ok, assertion} <- @sso_module.fetch_active_assertion(conn),
+         {:ok, client_auth} <- JumpWire.ClientAuth.fetch(assertion.computed.org_id, manifest_id, client_auth_id) do
+      send_json_resp(conn, 200, client_auth)
+    else
+      {:error, :not_found} ->
+        send_json_resp(conn, 404, %{error: "Client Auth not found"})
+
+      :error ->
+        send_json_resp(conn, 401, %{error: "SSO login required"})
+
+      _ ->
+        send_json_resp(conn, 404, %{error: "Client Auth not found"})
+    end
+  end
+
+  delete "/:mid/client-auths/:id" do
+    manifest_id = String.downcase(mid)
+    client_auth_id = String.downcase(id)
+
+    case @sso_module.fetch_active_assertion(conn) do
+      {:ok, assertion} ->
+        JumpWire.ClientAuth.delete(assertion.computed.org_id, manifest_id, client_auth_id)
+        send_json_resp(conn, 200, %{message: "Client Auth deleted"})
+
+      _ ->
+        send_json_resp(conn, 401, %{error: "SSO login required"})
+    end
+  end
+
   match _ do
     send_resp(conn, 404, %{error: "not found"})
   end
