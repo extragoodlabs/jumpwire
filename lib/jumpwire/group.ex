@@ -14,7 +14,7 @@ defmodule JumpWire.Group do
     field :permissions, Ecto.MapSet, default: MapSet.new()
     field :members, {:array, :string}, default: []
     field :organization_id, :string
-    embeds_many(:policies, JumpWire.Policy)
+    embeds_many :policies, JumpWire.Policy
   end
 
   def from_json({name, data}, org_id) do
