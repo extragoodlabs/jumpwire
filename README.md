@@ -259,6 +259,7 @@ Check out these handy installation guides as a reference for configuring or depl
 - [Deploy JumpWire into Kubernetes](https://docs.jumpwire.io/self-hosting-with-helm) - Run JumpWire on Kubernetes using our official helm chart
 - [Set up a bastion gateway for AWS RDS](./docs/rds-gateway-guide.md) - Run JumpWire on AWS to provide access to an RDS instance in a private VPC
 - [Login to PostgreSQL with Google Single Sign-On](./docs/sso-guide.md) - Run JumpWire locally and learn how to configure SSO using Google Workspace
+- [Control access via Groups using schema labels](./docs/group-access-policy-guide.md) - Configure JumpWire to control access to sensitive data through user group membership
 
 ## Configuration
 
