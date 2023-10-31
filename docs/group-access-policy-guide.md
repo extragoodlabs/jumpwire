@@ -119,7 +119,7 @@ We've defined the permission structure to allow for the following scenarios:
 
 #### Members of "Engineers" group can query all labels, and update `pii` and `sensitive` columns
 
-In effect, this allows engineers to read data from all of the sensitive columns in the database. They can even update the name, email and username columns. However they cannot insert or delete any of these columns, and because the name columns have "not null" constraints, this means that engineers cannot insert new rows or delete existing rows in either table.
+In effect, this allows engineers to read data from all of the sensitive columns in the database. They can even update the name, email, and username columns. However, they cannot insert or delete any of these columns, and because the name columns have "not null" constraints, engineers cannot insert new rows or delete existing rows in either table.
 
 Here's what that looks like in a psql shell:
 
