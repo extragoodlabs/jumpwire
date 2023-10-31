@@ -14,7 +14,7 @@ JumpWire is designed with two key features to solve this problem.
 
 This allows administrators to granularly control access to data, regardless of how it is stored in the underlying database. They can enforce the policies from an information security program like SOC2 that specify which roles in an organization can or can't access confidential data.
 
-In this guide we'll configure JumpWire to allow some groups to be able to query customer secrets while blocking queries for other groups. It will also restrict anyone from updating or deleting read-only data.
+In this guide, we'll configure JumpWire to allow some groups to query customer secrets while blocking queries for other groups. It will also restrict anyone from updating or deleting read-only data.
 
 #### Group membership via Single Sign-On
 
