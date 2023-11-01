@@ -45,26 +45,21 @@ defmodule JumpWire.Group do
   def hook(_group, _action), do: Task.completed(:ok)
 
   def store_policies({:ok, group}) do
-    Enum.each(group.policies, fn p -> JumpWire.GlobalConfig.put(:policies, p) end)
+    Enum.map(group.policies, fn p -> JumpWire.GlobalConfig.put(:policies, p) end)
     {:ok, group}
   end
 
   def store_policies(res), do: res
 
   def fetch(org_id, group_id) do
-    case JumpWire.GlobalConfig.get(:groups, {org_id, group_id}) do
-      nil -> {:error, "Group not found"}
-      group -> {:ok, group}
-    end
+    key = {org_id, group_id}
+    JumpWire.GlobalConfig.fetch(:groups, key)
   end
 
   def put(org_id, group) do
     JumpWire.GlobalConfig.put(:groups, {org_id, group.id}, group)
 
-    case store_policies({:ok, group}) do
-      {:ok, group} -> {:ok, group}
-      _ -> {:error, "Failed to store policies for group #{group.name}"}
-    end
+    store_policies({:ok, group})
   end
 
   def list_all(org_id) do

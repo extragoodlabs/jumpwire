@@ -19,15 +19,6 @@ defmodule JumpWire.API.GroupsRouter do
     key: "_jumpwire_key",
     signing_salt: "I5bC7Dc3"
 
-  plug :fetch_session
-  plug JumpWire.API.AuthPipeline
-  plug :fetch_query_params
-
-  plug Plug.Parsers,
-    parsers: [{:json, json_decoder: Jason}],
-    pass: ["*/*"]
-
-  plug :json_response
   plug :dispatch
 
   get "/" do
@@ -72,7 +63,7 @@ defmodule JumpWire.API.GroupsRouter do
       :error ->
         send_json_resp(conn, 401, %{error: "SSO login required"})
 
-      {:error, message} ->
+      _ ->
         send_json_resp(conn, 404, %{error: "Group not found"})
     end
   end
