@@ -128,6 +128,7 @@ defmodule JumpWire.API.Router do
   end
 
   forward "/manifests", to: JumpWire.API.ManifestRouter
+  forward "/groups", to: JumpWire.API.GroupsRouter
 
   match _ do
     send_resp(conn, 404, %{error: "not found"})

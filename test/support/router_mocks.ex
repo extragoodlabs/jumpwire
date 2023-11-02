@@ -42,4 +42,11 @@ defmodule JumpWire.API.RouterMocks do
       "manifest_id" => manifest_id
     }
   end
+
+  def group(name, permissions) do
+    %{
+      "name" => name,
+      "permissions" => permissions
+    }
+  end
 end

@@ -10,6 +10,7 @@
     field: 2,
     field: 3,
     forward: 1,
-    forward: 2
+    forward: 2,
+    embeds_many: 2,
   ]
 ]
