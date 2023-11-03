@@ -457,9 +457,9 @@ defmodule JumpWire.Proxy.PostgresTest do
     :ok = Setup.enable_table(manifest, schema)
     JumpWire.GlobalConfig.set(:manifest_metadata, org_id, [])
 
-    [[_, phone] | _] = conn
+    [[_, _, phone] | _] = conn
     |> insert_fake_rows(table)
-    |> Enum.reject(fn [_, phone] -> is_nil(phone) end)
+    |> Enum.reject(fn [_, _, phone] -> is_nil(phone) end)
 
     {:ok, %{rows: [[token, _] | _]}} =
       Postgrex.query(conn, "select phone, phone_jw_enc from #{table} where phone is not null order by id asc;", [])
@@ -652,7 +652,7 @@ defmodule JumpWire.Proxy.PostgresTest do
   } do
     assert :ok == Setup.enable_database(manifest)
     assert :ok == Setup.enable_table(manifest, schema)
-    _rows = insert_fake_rows(conn, table)
+    insert_fake_rows(conn, table)
 
     # allow selects only for secrets
     policy = %JumpWire.Policy{
@@ -680,7 +680,7 @@ defmodule JumpWire.Proxy.PostgresTest do
   } do
     assert :ok == Setup.enable_database(manifest)
     assert :ok == Setup.enable_table(manifest, schema)
-    _rows = insert_fake_rows(conn, table)
+    insert_fake_rows(conn, table)
 
     # create one policy to block all secrets access
     policy = %JumpWire.Policy{
@@ -719,7 +719,7 @@ defmodule JumpWire.Proxy.PostgresTest do
   } do
     assert :ok == Setup.enable_database(manifest)
     assert :ok == Setup.enable_table(manifest, schema)
-    _rows = insert_fake_rows(conn, table)
+    insert_fake_rows(conn, table)
 
     {:ok, pid} = Postgrex.start_link(params)
 
@@ -767,7 +767,7 @@ defmodule JumpWire.Proxy.PostgresTest do
   } do
     assert :ok == Setup.enable_database(manifest)
     assert :ok == Setup.enable_table(manifest, schema)
-    _rows = insert_fake_rows(conn, table)
+    insert_fake_rows(conn, table)
 
     # allow everything on secrets except inserts
     policy = %JumpWire.Policy{
@@ -811,7 +811,7 @@ defmodule JumpWire.Proxy.PostgresTest do
   } do
     assert :ok == Setup.enable_database(manifest)
     assert :ok == Setup.enable_table(manifest, schema)
-    _rows = insert_fake_rows(conn, table)
+    insert_fake_rows(conn, table)
 
     # allow everything on secrets except inserts
     policy = %JumpWire.Policy{
@@ -844,13 +844,13 @@ defmodule JumpWire.Proxy.PostgresTest do
     assert :ok == Setup.enable_database(manifest)
     assert :ok == Setup.enable_table(manifest, schema)
     rows = insert_fake_rows(conn, table)
-    value = rows |> Stream.map(fn [v, _] -> v end) |> Enum.find(fn v -> not is_nil(v) end)
+    [id, value, _] = rows
+    |> Enum.find(fn [_, v, _] -> not is_nil(v) end)
 
     policy = %JumpWire.Policy{
       version: 2,
       id: Uniq.UUID.uuid4(),
       handling: :filter_request,
-      label: "secret",
       organization_id: org_id,
       apply_on_match: true,
       attributes: [MapSet.new(["*"])],
@@ -865,8 +865,7 @@ defmodule JumpWire.Proxy.PostgresTest do
       "#{username}##{value}"
     end)
     {:ok, pid} = Postgrex.start_link(params)
-    assert {:ok, %{rows: [row]}} = Postgrex.query(pid, "SELECT value, phone FROM #{table}", [])
-    assert Enum.member?(rows, row)
+    assert {:ok, %{rows: [[^id]]}} = Postgrex.query(pid, "SELECT id FROM #{table}", [])
   end
 
   defp insert_fake_rows(conn, table) do
@@ -878,12 +877,10 @@ defmodule JumpWire.Proxy.PostgresTest do
     ]
     |> Enum.shuffle()
 
-    rows
-    |> Enum.each(fn r ->
-      {:ok, _} = Postgrex.query(conn, "insert into #{table} (value, phone) values ($1, $2);", r)
+    Enum.map(rows, fn r ->
+      %{rows: [[id]]} = Postgrex.query!(conn, "insert into #{table} (value, phone) values ($1, $2) returning id;", r)
+      [id | r]
     end)
-
-    rows
   end
 
   defp insert_fake_rows(conn, table, table2) do
