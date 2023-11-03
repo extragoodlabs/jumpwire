@@ -50,7 +50,7 @@ defmodule JumpWire.Policy do
   def changeset(policy, attrs) do
     policy
     |> cast(attrs, [:version, :handling, :label, :name, :attributes, :id, :encryption_key, :allowed_classification, :organization_id, :apply_on_match, :client_id])
-    |> validate_required([:handling, :label, :name, :id, :organization_id])
+    |> validate_required([:handling, :name, :id, :organization_id])
     |> validate_inclusion(:version, 1..2)
     |> versioned_validation()
     |> cast_polymorphic_embed(:configuration)
@@ -102,14 +102,19 @@ defmodule JumpWire.Policy do
   end
 
   def apply_policies(policies, record, request) do
-    if map_size(record.labels) == 0 do
-      # shortcut to skip policies if there are no labels on the data
-      record
-    else
-      case reduce_policies(policies, record, request) do
-        {record = %Record{}, _skip} -> record
-        res -> res
-      end
+    # Update the request to have attributes for all labels in the record
+    labels = record.labels
+    |> Stream.flat_map(fn {_path, labels} -> labels end)
+    |> Stream.map(fn l -> "label:#{l}" end)
+    |> MapSet.new()
+    request = Map.update!(request, :attributes, fn a ->
+      MapSet.union(a, labels)
+    end)
+
+    # Run through every policy
+    case reduce_policies(policies, record, request) do
+      {record = %Record{}, _skip} -> record
+      res -> res
     end
   end
 
@@ -135,7 +140,7 @@ defmodule JumpWire.Policy do
   :: {:cont, Record.t} | {:halt, result}
   def apply_policy(policy, record = %Record{data: data}, request) when is_map(data) do
     with {:ok, mod} <- action_module(policy, request),
-         matches when map_size(matches) > 0 <- Record.filter_by_label(record, policy.label) do
+         {:ok, matches} <- match_by_label(record, policy.label) do
       Logger.debug("Applying policy '#{policy.name}' to record")
       mod.handle(record, matches, policy, request)
     else
@@ -147,30 +152,32 @@ defmodule JumpWire.Policy do
   def apply_policy(policy, record = %Record{data: data}, stage) when is_list(data) do
     # Because we are iterating over each list element, we need to update the label(s) to
     # account for that fact. Instead of `$.[*].foo`, the policy should be applied to `$.foo`
-    new_labels =
-      record.labels
-      |> Enum.map(fn {k, v} -> {String.replace(k, "$.[*].", "$."), v} end)
-      |> Map.new()
+    new_labels = record.labels
+    |> Enum.map(fn {k, v} -> {String.replace(k, "$.[*].", "$."), v} end)
+    |> Map.new()
 
     Enum.reduce_while(data, [], fn d, acc ->
       case apply_policy(policy, %{record | data: d, labels: new_labels}, stage) do
-        {:cont, %{data: value}} ->
-          {:cont, [value | acc]}
-        {:halt, result} ->
-          {:halt, {:halt, result}}
+        {:cont, %{data: value}} -> {:cont, [value | acc]}
+        {:halt, result} -> {:halt, {:halt, result}}
       end
     end)
     |> case do
-      {:halt, result} ->
-        {:halt, result}
-
-      results ->
-        {:cont, %{record | data: Enum.reverse(results)}}
+      {:halt, result} -> {:halt, result}
+      results -> {:cont, %{record | data: Enum.reverse(results)}}
     end
   end
   def apply_policy(_, record, _) do
     Logger.warn("Data is being sent in an unknown format, policies cannot be applied")
     {:cont, record}
+  end
+
+  defp match_by_label(_record, nil), do: {:ok, %{}}
+  defp match_by_label(record, label) do
+    case Record.filter_by_label(record, label) do
+      matches when map_size(matches) > 0 -> {:ok, matches}
+      _ -> :skip
+    end
   end
 
   defp action_module(policy, request) do

@@ -30,7 +30,7 @@ defmodule JumpWire.PolicyTest do
         client_id: Uniq.UUID.uuid4(),
         manifest_id: Uniq.UUID.uuid4(),
         module: JumpWire.Proxy.Postgres,
-        attributes: MapSet.new(["*", "classification:Internal"]),
+        attributes: MapSet.new(["*", "classification:Internal", "label:pii"]),
       },
       record: record,
       org_id: @org_id,
@@ -282,6 +282,56 @@ defmodule JumpWire.PolicyTest do
     policy = %{policy | attributes: [attributes]}
     assert {:cont, %Record{data: data}} = Policy.apply_policy(policy, record, metadata)
     assert %{"ssn" => ssn} == data
+  end
+
+  test "policies with no label defined", %{metadata: metadata, record: record} do
+    # create a policy without apply_on_match
+    policy = %Policy{
+      handling: :block,
+      id: Uniq.UUID.uuid4(),
+      name: "block ssn",
+      apply_on_match: false,
+      attributes: [
+        MapSet.new(["classification:Confidential"]),
+        MapSet.new(["not:label:pii"]),
+      ],
+      organization_id: @org_id,
+    }
+    # continue if not pii
+    meta = Map.update!(metadata, :attributes, fn attr ->
+      MapSet.delete(attr, "label:pii")
+    end)
+    assert {:cont, ^record} = Policy.apply_policy(policy, record, meta)
+
+    # continue if confidential and pii
+    meta = Map.update!(metadata, :attributes, fn attr ->
+      MapSet.put(attr, "classification:Confidential")
+    end)
+    assert {:cont, ^record} = Policy.apply_policy(policy, record, meta)
+
+    # block otherwise
+    assert {:halt, :blocked} = Policy.apply_policy(policy, record, metadata)
+
+    # create a policy with apply_on_match
+    policy = %Policy{
+      handling: :block,
+      id: Uniq.UUID.uuid4(),
+      name: "block ssn",
+      apply_on_match: true,
+      attributes: [
+        MapSet.new(["classification:Confidential", "label:pii"]),
+      ],
+      organization_id: @org_id,
+    }
+
+    # block if confidential and pii
+    meta = Map.update!(metadata, :attributes, fn attr ->
+      MapSet.put(attr, "classification:Confidential")
+    end)
+    assert {:halt, :blocked} = Policy.apply_policy(policy, record, meta)
+
+    # continue otherwise
+    assert {:cont, ^record} = Policy.apply_policy(policy, record, metadata)
   end
 
   property "policies are returned in a defined order", [:verbose], %{metadata: metadata} do
