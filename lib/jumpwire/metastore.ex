@@ -39,7 +39,6 @@ defmodule JumpWire.Metastore do
     |> validate_required([:id, :name, :organization_id])
     |> cast_polymorphic_embed(:configuration, required: true)
     |> apply_action(:insert)
-    |> JumpWire.Credentials.load()
   end
 
   def hook(_, _) do
@@ -59,5 +58,22 @@ defmodule JumpWire.Metastore do
   @spec fetch_all(connection(), [value()], Metastore.t()) :: {:ok, map()} | :error
   def fetch_all(conn, keys, store) do
     store.configuration.__struct__.fetch_all(conn, keys, store)
+  end
+
+  def fetch(org_id, store_id) do
+    key = {org_id, store_id}
+    JumpWire.GlobalConfig.fetch(:metastores, key)
+  end
+
+  def put(org_id, metastore) do
+    JumpWire.GlobalConfig.put(:metastores, {org_id, metastore.id}, metastore)
+  end
+
+  def list_all(org_id) do
+    JumpWire.GlobalConfig.all(:metastores, {org_id, :_})
+  end
+
+  def delete(org_id, metastore_id) do
+    JumpWire.GlobalConfig.delete(:metastores, {org_id, metastore_id})
   end
 end
