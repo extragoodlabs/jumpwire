@@ -500,8 +500,9 @@ defmodule JumpWire.Proxy.SQL.Statement do
   @type list_agg_on_overflow() :: :error | Truncate.t()
 
   typedstruct module: Truncate do
-    field :filler, Statement.expr()
-    field :with_count, boolean()
+    field :table_name, Statement.object_name()
+    field :partitions, [Statement.expr()] | nil
+    field :table, boolean()
   end
 
   typedstruct module: ListAgg do
