@@ -1053,6 +1053,15 @@ defmodule JumpWire.Proxy.SQL.ParserTest do
     assert normalize(sql) == normalize(expected)
   end
 
+  test "parse TRUNCATE statements" do
+    query = "TRUNCATE mytable;"
+    assert {:ok, [statement]} = parse_query(query)
+    assert {:ok, request} = Parser.to_request(statement)
+    assert request.delete == [
+      %Field{table: "mytable", column: :wildcard},
+    ]
+  end
+
   defp assert_table_select(statement, name) do
     assert %Query{
       body: %Select{

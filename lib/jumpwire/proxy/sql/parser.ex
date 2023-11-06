@@ -119,6 +119,13 @@ defmodule JumpWire.Proxy.SQL.Parser do
     {:ok, acc.request}
   end
 
+  def to_request(statement = %Statement.Truncate{}) do
+    acc = %Traveler{op: :delete}
+    |> find_table(statement.table_name)
+    |> Traveler.put_field(%Field{column: :wildcard})
+    {:ok, acc.request}
+  end
+
   def to_request(statement = %Statement.Insert{}) do
     acc = %Traveler{op: :insert}
     |> find_table(statement.table_name)
