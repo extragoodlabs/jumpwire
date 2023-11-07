@@ -39,6 +39,7 @@ defmodule JumpWire.Metastore do
     |> validate_required([:id, :name, :organization_id])
     |> cast_polymorphic_embed(:configuration, required: true)
     |> apply_action(:insert)
+    |> JumpWire.Credentials.load()
   end
 
   def hook(_, _) do
