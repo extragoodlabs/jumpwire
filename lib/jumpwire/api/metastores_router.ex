@@ -99,11 +99,11 @@ defmodule JumpWire.API.MetastoresRouter do
 
   defp validate_params(params) do
     credentials = Map.get(params, "credentials")
-    
-    if !credentials do
-      {:error, "credentials must be provided"}
-    else
+
+    if credentials do
       :ok
+    else
+      {:error, "credentials must be provided"}
     end
   end
 end
