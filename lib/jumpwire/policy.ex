@@ -19,25 +19,24 @@ defmodule JumpWire.Policy do
   @typedoc """
   Result of applying policy.
   """
-  @type result :: Record.t | :blocked | {:error, atom()}
+  @type result :: Record.t() | :blocked | {:error, atom()}
 
-  @callback handle(Record.t, matches :: map, Policy.t, request :: map)
-  :: {:cont, Record.t} | {:halt, result} | {:skip, Record.t} | {{:skip, atom}, Record.t}
+  @callback handle(Record.t(), matches :: map, Policy.t(), request :: map) ::
+              {:cont, Record.t()} | {:halt, result} | {:skip, Record.t()} | {{:skip, atom}, Record.t()}
 
   typed_embedded_schema null: false do
     field :version, :integer, default: 2
     field :name, :string
     field :attributes, {:array, Ecto.MapSet}, default: []
     field :apply_on_match, :boolean, default: false
-    field :handling, Ecto.Enum,
-      values: [:access, :block, :drop_field, :encrypt, :tokenize, :resolve_fields, :filter_request]
+    field :handling, Ecto.Enum, values: [:access, :block, :drop_field, :encrypt, :tokenize, :resolve_fields, :filter_request]
     field :label, :string
     field :allowed_classification, :string
     field :encryption_key, Ecto.Atom, default: :aes
     field :organization_id, :string
     field :client_id, :string
 
-    polymorphic_embeds_one :configuration,
+    polymorphic_embeds_one(:configuration,
       types: [
         resolve_fields: Policy.ResolveFields,
         filter_request: Policy.FilterRequest
@@ -45,11 +44,24 @@ defmodule JumpWire.Policy do
       on_replace: :update,
       on_type_not_found: :changeset_error,
       type_field: :type
+    )
   end
 
   def changeset(policy, attrs) do
     policy
-    |> cast(attrs, [:version, :handling, :label, :name, :attributes, :id, :encryption_key, :allowed_classification, :organization_id, :apply_on_match, :client_id])
+    |> cast(attrs, [
+      :version,
+      :handling,
+      :label,
+      :name,
+      :attributes,
+      :id,
+      :encryption_key,
+      :allowed_classification,
+      :organization_id,
+      :apply_on_match,
+      :client_id
+    ])
     |> validate_required([:handling, :name, :id, :organization_id])
     |> validate_inclusion(:version, 1..2)
     |> versioned_validation()
@@ -78,18 +90,23 @@ defmodule JumpWire.Policy do
       |> Stream.filter(fn %{root_type: type} -> Enum.member?(proxy_types, type) end)
       |> Enum.each(fn manifest ->
         case manifest.root_type do
-          :postgresql -> JumpWire.Proxy.Postgres.Setup.enable_tables(manifest)
-          :mysql -> JumpWire.Proxy.MySQL.Setup.enable_tables(manifest)
+          :postgresql ->
+            JumpWire.Proxy.Postgres.Setup.enable_tables(manifest)
+
+          :mysql ->
+            JumpWire.Proxy.MySQL.Setup.enable_tables(manifest)
 
           t ->
             Logger.error("Unable to update metadata from policy, unknown type #{t}")
         end
+
         JumpWire.PubSub.broadcast("*", {:setup, :policy, policy})
       end)
 
       JumpWire.Proxy.measure_databases()
     end)
   end
+
   def hook(_, _), do: Task.completed(:ok)
 
   @action_order Enum.with_index([:access, :block, :filter_request, :drop_field, :resolve_fields, :encrypt, :tokenize])
@@ -101,15 +118,31 @@ defmodule JumpWire.Policy do
     |> Enum.sort_by(fn policy -> @action_order[policy.handling] end)
   end
 
+  def fetch(org_id, policy_id) do
+    key = {org_id, policy_id}
+    JumpWire.GlobalConfig.fetch(:policies, key)
+  end
+
+  def put(org_id, policy) do
+    JumpWire.GlobalConfig.put(:policies, {org_id, policy.id}, policy)
+  end
+
+  def delete(org_id, policy_id) do
+    JumpWire.GlobalConfig.delete(:policies, {org_id, policy_id})
+  end
+
   def apply_policies(policies, record, request) do
     # Update the request to have attributes for all labels in the record
-    labels = record.labels
-    |> Stream.flat_map(fn {_path, labels} -> labels end)
-    |> Stream.map(fn l -> "label:#{l}" end)
-    |> MapSet.new()
-    request = Map.update!(request, :attributes, fn a ->
-      MapSet.union(a, labels)
-    end)
+    labels =
+      record.labels
+      |> Stream.flat_map(fn {_path, labels} -> labels end)
+      |> Stream.map(fn l -> "label:#{l}" end)
+      |> MapSet.new()
+
+    request =
+      Map.update!(request, :attributes, fn a ->
+        MapSet.union(a, labels)
+      end)
 
     # Run through every policy
     case reduce_policies(policies, record, request) do
@@ -130,14 +163,15 @@ defmodule JumpWire.Policy do
           {:cont, record} ->
             {:cont, {record, skip_labels}}
 
-          res -> res
+          res ->
+            res
         end
       end
     end)
   end
 
-  @spec apply_policy(policy :: Policy.t, record :: Record.t, request :: map)
-  :: {:cont, Record.t} | {:halt, result}
+  @spec apply_policy(policy :: Policy.t(), record :: Record.t(), request :: map) ::
+          {:cont, Record.t()} | {:halt, result}
   def apply_policy(policy, record = %Record{data: data}, request) when is_map(data) do
     with {:ok, mod} <- action_module(policy, request),
          {:ok, matches} <- match_by_label(record, policy.label) do
@@ -149,12 +183,14 @@ defmodule JumpWire.Policy do
       _ -> {:cont, record}
     end
   end
+
   def apply_policy(policy, record = %Record{data: data}, stage) when is_list(data) do
     # Because we are iterating over each list element, we need to update the label(s) to
     # account for that fact. Instead of `$.[*].foo`, the policy should be applied to `$.foo`
-    new_labels = record.labels
-    |> Enum.map(fn {k, v} -> {String.replace(k, "$.[*].", "$."), v} end)
-    |> Map.new()
+    new_labels =
+      record.labels
+      |> Enum.map(fn {k, v} -> {String.replace(k, "$.[*].", "$."), v} end)
+      |> Map.new()
 
     Enum.reduce_while(data, [], fn d, acc ->
       case apply_policy(policy, %{record | data: d, labels: new_labels}, stage) do
@@ -167,12 +203,14 @@ defmodule JumpWire.Policy do
       results -> {:cont, %{record | data: Enum.reverse(results)}}
     end
   end
+
   def apply_policy(_, record, _) do
     Logger.warn("Data is being sent in an unknown format, policies cannot be applied")
     {:cont, record}
   end
 
   defp match_by_label(_record, nil), do: {:ok, %{}}
+
   defp match_by_label(record, label) do
     case Record.filter_by_label(record, label) do
       matches when map_size(matches) > 0 -> {:ok, matches}
@@ -198,24 +236,26 @@ defmodule JumpWire.Policy do
 
   defp request_match?(policy = %Policy{version: 2}, request) do
     # Check the attributes of the request against the policy
-    attribute_match = Enum.any?(policy.attributes, fn group ->
-      missing = MapSet.difference(group, request.attributes)
-      if MapSet.size(missing) == 0 do
-        # all attributes of the policy group are present in the request
-        true
-      else
-        case Enum.split_with(missing, fn a -> String.starts_with?(a, "not:") end) do
-          {inverse_attrs, []} ->
-            inverse_attrs = inverse_attrs |> Stream.map(fn "not:" <> rest -> rest end) |> MapSet.new()
-            # match the request if any of these inverted attributes are present
-            MapSet.disjoint?(request.attributes, inverse_attrs)
+    attribute_match =
+      Enum.any?(policy.attributes, fn group ->
+        missing = MapSet.difference(group, request.attributes)
 
-          _ ->
-            # the request is missing attributes that are not prefixed with `not`
-            false
+        if MapSet.size(missing) == 0 do
+          # all attributes of the policy group are present in the request
+          true
+        else
+          case Enum.split_with(missing, fn a -> String.starts_with?(a, "not:") end) do
+            {inverse_attrs, []} ->
+              inverse_attrs = inverse_attrs |> Stream.map(fn "not:" <> rest -> rest end) |> MapSet.new()
+              # match the request if any of these inverted attributes are present
+              MapSet.disjoint?(request.attributes, inverse_attrs)
+
+            _ ->
+              # the request is missing attributes that are not prefixed with `not`
+              false
+          end
         end
-      end
-    end)
+      end)
 
     if policy.apply_on_match do
       attribute_match
@@ -223,17 +263,21 @@ defmodule JumpWire.Policy do
       not attribute_match
     end
   end
+
   defp request_match?(%Policy{allowed_classification: nil}, _), do: true
+
   defp request_match?(policy = %Policy{handling: handling}, request)
-  when handling in [:block, :drop_field] do
+       when handling in [:block, :drop_field] do
     # check if the client is included by the policy. By default all clients are included,
     # so this function looks at any exclusion rules to find exceptions.
     request.classification != policy.allowed_classification
   end
+
   defp request_match?(policy = %Policy{handling: :resolve_fields}, request) do
     # resolve_fields should only apply when classifications match
     request.classification == policy.allowed_classification and not is_nil(request.classification)
   end
+
   defp request_match?(_, _), do: true
 
   defp module_from_action(%Policy{handling: handling, version: 2}, _request) do
@@ -241,21 +285,23 @@ defmodule JumpWire.Policy do
   end
 
   defp module_from_action(policy = %Policy{handling: :encrypt}, request) do
-    handling = cond do
-      is_nil(policy.allowed_classification) -> :encrypt
-      request.classification == policy.allowed_classification -> :decrypt
-      true -> :encrypt
-    end
+    handling =
+      cond do
+        is_nil(policy.allowed_classification) -> :encrypt
+        request.classification == policy.allowed_classification -> :decrypt
+        true -> :encrypt
+      end
 
     module_from_action(handling)
   end
 
   defp module_from_action(policy = %Policy{handling: :tokenize}, request) do
-    handling = cond do
-      is_nil(policy.allowed_classification) -> :tokenize
-      request.classification == policy.allowed_classification -> :detokenize
-      true -> :tokenize
-    end
+    handling =
+      cond do
+        is_nil(policy.allowed_classification) -> :tokenize
+        request.classification == policy.allowed_classification -> :detokenize
+        true -> :tokenize
+      end
 
     module_from_action(handling)
   end
@@ -268,15 +314,33 @@ defmodule JumpWire.Policy do
   defp module_from_action(handling) do
     mod =
       case handling do
-        :access -> Policy.Access
-        :block -> Policy.Block
-        :drop_field -> Policy.DropField
-        :encrypt -> Policy.Encrypt
-        :decrypt -> Policy.Decrypt
-        :tokenize -> Policy.Tokenize
-        :detokenize -> Policy.Detokenize
-        :resolve_fields -> Policy.ResolveFields
-        :filter_request -> Policy.FilterRequest
+        :access ->
+          Policy.Access
+
+        :block ->
+          Policy.Block
+
+        :drop_field ->
+          Policy.DropField
+
+        :encrypt ->
+          Policy.Encrypt
+
+        :decrypt ->
+          Policy.Decrypt
+
+        :tokenize ->
+          Policy.Tokenize
+
+        :detokenize ->
+          Policy.Detokenize
+
+        :resolve_fields ->
+          Policy.ResolveFields
+
+        :filter_request ->
+          Policy.FilterRequest
+
         _ ->
           Logger.error("Policy handling #{handling} not implemented")
           nil

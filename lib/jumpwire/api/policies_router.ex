@@ -1,6 +1,6 @@
-defmodule JumpWire.API.GroupsRouter do
+defmodule JumpWire.API.PoliciesRouter do
   @moduledoc """
-  A Plug.Router for handling internal API calls with authentication.
+  A Plug.Router for handling internal API calls with policies.
   """
 
   use Plug.Router
@@ -24,7 +24,7 @@ defmodule JumpWire.API.GroupsRouter do
   get "/" do
     case @sso_module.fetch_active_assertion(conn) do
       {:ok, assertion} ->
-        body = JumpWire.Group.list_all(assertion.computed.org_id)
+        body = JumpWire.Policy.list_all(assertion.computed.org_id)
         send_json_resp(conn, 200, body)
 
       _ ->
@@ -36,8 +36,8 @@ defmodule JumpWire.API.GroupsRouter do
     with {:ok, assertion} <- @sso_module.fetch_active_assertion(conn),
          uuid <- Uniq.UUID.uuid4(),
          updated <- conn.body_params |> Map.put("id", uuid),
-         {:ok, group} <- JumpWire.Group.from_json({updated["name"], updated}, assertion.computed.org_id),
-         {:ok, group} <- JumpWire.Group.put(assertion.computed.org_id, group) do
+         {:ok, group} <- JumpWire.Policy.from_json(updated, assertion.computed.org_id),
+         {:ok, group} <- JumpWire.Policy.put(assertion.computed.org_id, group) do
       send_json_resp(conn, 201, group)
     else
       :error ->
@@ -57,7 +57,7 @@ defmodule JumpWire.API.GroupsRouter do
     id = String.downcase(id)
 
     with {:ok, assertion} <- @sso_module.fetch_active_assertion(conn),
-         {:ok, group} <- JumpWire.Group.fetch(assertion.computed.org_id, id) do
+         {:ok, group} <- JumpWire.Policy.fetch(assertion.computed.org_id, id) do
       send_json_resp(conn, 200, group)
     else
       :error ->
@@ -73,7 +73,7 @@ defmodule JumpWire.API.GroupsRouter do
 
     case @sso_module.fetch_active_assertion(conn) do
       {:ok, assertion} ->
-        JumpWire.Group.delete(assertion.computed.org_id, id)
+        JumpWire.Policy.delete(assertion.computed.org_id, id)
         send_json_resp(conn, 200, %{message: "Group deleted"})
 
       _ ->
