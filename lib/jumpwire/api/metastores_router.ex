@@ -99,23 +99,11 @@ defmodule JumpWire.API.MetastoresRouter do
 
   defp validate_params(params) do
     credentials = Map.get(params, "credentials")
-    ## TODO: add these back when we pick a vault implementation
-    # vault_database = Map.get(params, "vault_database")
-    # vault_role = Map.get(params, "vault_role")
-
-    cond do
-      ## TODO: add these back when we pick a vault implementation
-      # credentials && (vault_database || vault_role) ->
-      #   {:error, "Cannot have credentials and vault parameters at the same time"}
-
-      # !credentials && (!vault_database || !vault_role) ->
-      #   {:error, "Either credentials or both vault_database and vault_role must be provided"}
-
-      !credentials ->
-        {:error, "credentials must be provided"}
-
-      true ->
-        :ok
+    
+    if !credentials do
+      {:error, "credentials must be provided"}
+    else
+      :ok
     end
   end
 end
