@@ -19,8 +19,8 @@ defmodule JumpWire.MetastoresRouterTest do
   end
 
   describe "/" do
-    test "GET returns a 200 status with valid SSO" do
-      mock_metastore = JumpWire.API.RouterMocks.metastore("test-metastore")
+    test "GET returns a 200 status with credential metastore" do
+      mock_metastore = JumpWire.API.RouterMocks.metastore_with_creds("test-metastore")
 
       expect(JumpWire.SSO.MockImpl, :fetch_active_assertion, 2, fn _ ->
         {:ok, %{computed: %{org_id: "adb4eef3-a8da-457c-8e69-9e589d109f90"}}}
@@ -59,159 +59,173 @@ defmodule JumpWire.MetastoresRouterTest do
           assert expected["configuration"]["connection"]["hostname"] == head["configuration"]["connection"]["hostname"]
           assert expected["configuration"]["connection"]["port"] == head["configuration"]["connection"]["port"]
           assert expected["configuration"]["connection"]["ssl"] == head["configuration"]["connection"]["ssl"]
-          # assert head["configuration"]["type"] == "postgresql_kv"
 
         {:error, _} ->
           assert false
       end
     end
 
-    # test "PUT returns a 201 status with valid input" do
-    #   mock_metastore = JumpWire.API.RouterMocks.metastore("test-metastore")
+    test "GET returns a 400 status when credentials are missing from metastore" do
+      mock_metastore = JumpWire.API.RouterMocks.metastore_without_creds("test-metastore")
 
-    #   expect(JumpWire.SSO.MockImpl, :fetch_active_assertion, 3, fn _ ->
-    #     {:ok, %{computed: %{org_id: "adb4eef3-a8da-457c-8e69-9e589d109f90"}}}
-    #   end)
+      expect(JumpWire.SSO.MockImpl, :fetch_active_assertion, 1, fn _ ->
+        {:ok, %{computed: %{org_id: "adb4eef3-a8da-457c-8e69-9e589d109f90"}}}
+      end)
 
-    #   token = JumpWire.API.Token.get_root_token()
+      token = JumpWire.API.Token.get_root_token()
 
-    #   conn =
-    #     conn(:get, "/")
-    #     |> put_auth_header(token)
-    #     |> MetastoresRouter.call(@opts)
+      conn =
+        conn(:post, "/", mock_metastore)
+        |> put_auth_header(token)
+        |> MetastoresRouter.call(@opts)
 
-    #   assert conn.status == 200
-    #   assert conn.resp_body == "[]"
+      assert conn.status == 400
+    end
 
-    #   conn =
-    #     conn(:post, "/", mock_metastore)
-    #     |> put_auth_header(token)
-    #     |> MetastoresRouter.call(@opts)
+    test "PUT returns a 201 status with valid input" do
+      mock_metastore = JumpWire.API.RouterMocks.metastore_with_creds("test-metastore")
 
-    #   assert conn.status == 201
+      expect(JumpWire.SSO.MockImpl, :fetch_active_assertion, 3, fn _ ->
+        {:ok, %{computed: %{org_id: "adb4eef3-a8da-457c-8e69-9e589d109f90"}}}
+      end)
 
-    #   conn =
-    #     conn(:get, "/")
-    #     |> put_auth_header(token)
-    #     |> MetastoresRouter.call(@opts)
+      token = JumpWire.API.Token.get_root_token()
 
-    #   case Jason.decode(conn.resp_body) do
-    #     {:ok, body} ->
-    #       expected = mock_metastore
+      conn =
+        conn(:get, "/")
+        |> put_auth_header(token)
+        |> MetastoresRouter.call(@opts)
 
-    #       assert length(body) == 1
-    #       head = List.first(body)
+      assert conn.status == 200
+      assert conn.resp_body == "[]"
 
-    #       assert expected["name"] == head["name"]
-    #       assert head["organization_id"] == "adb4eef3-a8da-457c-8e69-9e589d109f90"
+      conn =
+        conn(:post, "/", mock_metastore)
+        |> put_auth_header(token)
+        |> MetastoresRouter.call(@opts)
 
-    #       assert expected["configuration"]["table"] == head["configuration"]["table"]
-    #       assert expected["configuration"]["key_field"] == head["configuration"]["key_field"]
-    #       assert expected["configuration"]["value_field"] == head["configuration"]["value_field"]
+      assert conn.status == 201
 
-    #       assert expected["configuration"]["connection"]["hostname"] == head["configuration"]["connection"]["hostname"]
-    #       assert expected["configuration"]["connection"]["port"] == head["configuration"]["connection"]["port"]
-    #       assert expected["configuration"]["connection"]["ssl"] == head["configuration"]["connection"]["ssl"]
-    #       # assert head["configuration"]["type"] == "postgresql_kv"
+      conn =
+        conn(:get, "/")
+        |> put_auth_header(token)
+        |> MetastoresRouter.call(@opts)
 
-    #     {:error, _} ->
-    #       assert false
-    #   end
-    # end
+      case Jason.decode(conn.resp_body) do
+        {:ok, body} ->
+          expected = mock_metastore
 
-    # test "GET /:id returns a 200 status with valid metastore ID" do
-    #   mock_metastore = JumpWire.API.RouterMocks.metastore("test-metastore")
+          assert length(body) == 1
+          head = List.first(body)
 
-    #   expect(JumpWire.SSO.MockImpl, :fetch_active_assertion, 2, fn _ ->
-    #     {:ok, %{computed: %{org_id: "adb4eef3-a8da-457c-8e69-9e589d109f90"}}}
-    #   end)
+          assert expected["name"] == head["name"]
+          assert head["organization_id"] == "adb4eef3-a8da-457c-8e69-9e589d109f90"
 
-    #   token = JumpWire.API.Token.get_root_token()
+          assert expected["configuration"]["table"] == head["configuration"]["table"]
+          assert expected["configuration"]["key_field"] == head["configuration"]["key_field"]
+          assert expected["configuration"]["value_field"] == head["configuration"]["value_field"]
 
-    #   conn =
-    #     conn(:post, "/", mock_metastore)
-    #     |> put_auth_header(token)
-    #     |> MetastoresRouter.call(@opts)
+          assert expected["configuration"]["connection"]["hostname"] == head["configuration"]["connection"]["hostname"]
+          assert expected["configuration"]["connection"]["port"] == head["configuration"]["connection"]["port"]
+          assert expected["configuration"]["connection"]["ssl"] == head["configuration"]["connection"]["ssl"]
 
-    #   assert conn.status == 201
+        {:error, _} ->
+          assert false
+      end
+    end
 
-    #   case Jason.decode(conn.resp_body) do
-    #     {:ok, body} ->
-    #       group_id = body["id"]
+    test "GET /:id returns a 200 status with valid metastore ID" do
+      mock_metastore = JumpWire.API.RouterMocks.metastore_with_creds("test-metastore")
 
-    #       conn =
-    #         conn(:get, "/#{group_id}")
-    #         |> put_auth_header(token)
-    #         |> MetastoresRouter.call(@opts)
+      expect(JumpWire.SSO.MockImpl, :fetch_active_assertion, 2, fn _ ->
+        {:ok, %{computed: %{org_id: "adb4eef3-a8da-457c-8e69-9e589d109f90"}}}
+      end)
 
-    #       assert conn.status == 200
+      token = JumpWire.API.Token.get_root_token()
 
-    #       case Jason.decode(conn.resp_body) do
-    #         {:ok, body} ->
-    #           expected = mock_metastore
+      conn =
+        conn(:post, "/", mock_metastore)
+        |> put_auth_header(token)
+        |> MetastoresRouter.call(@opts)
 
-    #           assert expected["name"] == body["name"]
-    #           assert body["organization_id"] == "adb4eef3-a8da-457c-8e69-9e589d109f90"
+      assert conn.status == 201
 
-    #           assert expected["configuration"]["table"] == body["configuration"]["table"]
-    #           assert expected["configuration"]["key_field"] == body["configuration"]["key_field"]
-    #           assert expected["configuration"]["value_field"] == body["configuration"]["value_field"]
+      case Jason.decode(conn.resp_body) do
+        {:ok, body} ->
+          group_id = body["id"]
 
-    #           assert expected["configuration"]["connection"]["hostname"] == body["configuration"]["connection"]["hostname"]
-    #           assert expected["configuration"]["connection"]["port"] == body["configuration"]["connection"]["port"]
-    #           assert expected["configuration"]["connection"]["ssl"] == body["configuration"]["connection"]["ssl"]
-    #           # assert head["configuration"]["type"] == "postgresql_kv"
+          conn =
+            conn(:get, "/#{group_id}")
+            |> put_auth_header(token)
+            |> MetastoresRouter.call(@opts)
 
-    #         {:error, _} ->
-    #           assert false
-    #       end
+          assert conn.status == 200
 
-    #     {:error, _} ->
-    #       assert false
-    #   end
-    # end
+          case Jason.decode(conn.resp_body) do
+            {:ok, body} ->
+              expected = mock_metastore
 
-    # test "DELETE /:id returns a 200 status with valid metastore ID" do
-    #   mock_metastore = JumpWire.API.RouterMocks.metastore("test-metastore")
+              assert expected["name"] == body["name"]
+              assert body["organization_id"] == "adb4eef3-a8da-457c-8e69-9e589d109f90"
 
-    #   expect(JumpWire.SSO.MockImpl, :fetch_active_assertion, 4, fn _ ->
-    #     {:ok, %{computed: %{org_id: "adb4eef3-a8da-457c-8e69-9e589d109f90"}}}
-    #   end)
+              assert expected["configuration"]["table"] == body["configuration"]["table"]
+              assert expected["configuration"]["key_field"] == body["configuration"]["key_field"]
+              assert expected["configuration"]["value_field"] == body["configuration"]["value_field"]
 
-    #   token = JumpWire.API.Token.get_root_token()
+              assert expected["configuration"]["connection"]["hostname"] == body["configuration"]["connection"]["hostname"]
+              assert expected["configuration"]["connection"]["port"] == body["configuration"]["connection"]["port"]
+              assert expected["configuration"]["connection"]["ssl"] == body["configuration"]["connection"]["ssl"]
 
-    #   conn =
-    #     conn(:post, "/", mock_metastore)
-    #     |> put_auth_header(token)
-    #     |> MetastoresRouter.call(@opts)
+            {:error, _} ->
+              assert false
+          end
 
-    #   assert conn.status == 201
+        {:error, _} ->
+          assert false
+      end
+    end
 
-    #   {:ok, metastore} = Jason.decode(conn.resp_body)
+    test "DELETE /:id returns a 200 status with valid metastore ID" do
+      mock_metastore = JumpWire.API.RouterMocks.metastore_with_creds("test-metastore")
 
-    #   group_id = metastore["id"]
+      expect(JumpWire.SSO.MockImpl, :fetch_active_assertion, 4, fn _ ->
+        {:ok, %{computed: %{org_id: "adb4eef3-a8da-457c-8e69-9e589d109f90"}}}
+      end)
 
-    #   conn =
-    #     conn(:get, "/#{group_id}")
-    #     |> put_auth_header(token)
-    #     |> MetastoresRouter.call(@opts)
+      token = JumpWire.API.Token.get_root_token()
 
-    #   assert conn.status == 200
+      conn =
+        conn(:post, "/", mock_metastore)
+        |> put_auth_header(token)
+        |> MetastoresRouter.call(@opts)
 
-    #   conn =
-    #     conn(:delete, "/#{group_id}")
-    #     |> put_auth_header(token)
-    #     |> MetastoresRouter.call(@opts)
+      assert conn.status == 201
 
-    #   assert conn.status == 200
+      {:ok, metastore} = Jason.decode(conn.resp_body)
 
-    #   conn =
-    #     conn(:get, "/#{group_id}")
-    #     |> put_auth_header(token)
-    #     |> MetastoresRouter.call(@opts)
+      group_id = metastore["id"]
 
-    #   assert conn.status == 404
-    # end
+      conn =
+        conn(:get, "/#{group_id}")
+        |> put_auth_header(token)
+        |> MetastoresRouter.call(@opts)
+
+      assert conn.status == 200
+
+      conn =
+        conn(:delete, "/#{group_id}")
+        |> put_auth_header(token)
+        |> MetastoresRouter.call(@opts)
+
+      assert conn.status == 200
+
+      conn =
+        conn(:get, "/#{group_id}")
+        |> put_auth_header(token)
+        |> MetastoresRouter.call(@opts)
+
+      assert conn.status == 404
+    end
   end
 
   defp put_auth_header(conn, token) do

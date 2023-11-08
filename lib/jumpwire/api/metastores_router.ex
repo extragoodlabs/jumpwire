@@ -37,6 +37,7 @@ defmodule JumpWire.API.MetastoresRouter do
     with {:ok, assertion} <- @sso_module.fetch_active_assertion(conn),
          uuid <- Uniq.UUID.uuid4(),
          updated <- conn.body_params |> Map.put("id", uuid),
+         :ok <- validate_params(conn.body_params),
          {:ok, metastore} <- JumpWire.Metastore.from_json(updated, assertion.computed.org_id),
          {:ok, metastore} <- JumpWire.Metastore.put(assertion.computed.org_id, metastore) do
       send_json_resp(conn, 201, metastore)
@@ -94,5 +95,27 @@ defmodule JumpWire.API.MetastoresRouter do
 
   defp send_json_resp(conn, status, body) do
     send_resp(conn, status, Jason.encode!(body))
+  end
+
+  defp validate_params(params) do
+    credentials = Map.get(params, "credentials")
+    ## TODO: add these back when we pick a vault implementation
+    # vault_database = Map.get(params, "vault_database")
+    # vault_role = Map.get(params, "vault_role")
+
+    cond do
+      ## TODO: add these back when we pick a vault implementation
+      # credentials && (vault_database || vault_role) ->
+      #   {:error, "Cannot have credentials and vault parameters at the same time"}
+
+      # !credentials && (!vault_database || !vault_role) ->
+      #   {:error, "Either credentials or both vault_database and vault_role must be provided"}
+
+      !credentials ->
+        {:error, "credentials must be provided"}
+
+      true ->
+        :ok
+    end
   end
 end
