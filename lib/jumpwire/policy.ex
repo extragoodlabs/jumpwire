@@ -127,13 +127,21 @@ defmodule JumpWire.Policy do
   def put(:insert, org_id, policy) do
     PubSub.broadcast("*", {:update, :policy, policy})
     JumpWire.GlobalConfig.put(:policies, {org_id, policy.id}, policy)
-    hook(policy, :insert)
+
+    case hook(policy, :insert) do
+      %Task{mfa: {Task, :completed, _}} -> {:ok, policy}
+      _ -> {:error, "Failed to process policy"}
+    end
   end
 
   def put(:update, org_id, policy) do
     PubSub.broadcast("*", {:update, :policy, policy})
     JumpWire.GlobalConfig.put(:policies, {org_id, policy.id}, policy)
-    hook(policy, :update)
+
+    case hook(policy, :update) do
+      %Task{mfa: {Task, :completed, _}} -> {:ok, policy}
+      _ -> {:error, "Failed to process policy"}
+    end
   end
 
   def delete(org_id, policy_id) do
