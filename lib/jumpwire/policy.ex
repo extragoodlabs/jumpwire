@@ -13,6 +13,7 @@ defmodule JumpWire.Policy do
   use JumpWire.Schema
   require Logger
   alias JumpWire.Record
+  alias JumpWire.PubSub
   alias __MODULE__
   import Ecto.Changeset
 
@@ -123,12 +124,25 @@ defmodule JumpWire.Policy do
     JumpWire.GlobalConfig.fetch(:policies, key)
   end
 
-  def put(org_id, policy) do
+  def put(:insert, org_id, policy) do
+    PubSub.broadcast("*", {:update, :policy, policy})
     JumpWire.GlobalConfig.put(:policies, {org_id, policy.id}, policy)
+    hook(policy, :insert)
+  end
+
+  def put(:update, org_id, policy) do
+    PubSub.broadcast("*", {:update, :policy, policy})
+    JumpWire.GlobalConfig.put(:policies, {org_id, policy.id}, policy)
+    hook(policy, :update)
   end
 
   def delete(org_id, policy_id) do
+    key = {org_id, policy_id}
+    {:ok, policy} = JumpWire.GlobalConfig.fetch(:policies, key)
+
+    PubSub.broadcast("*", {:delete, :policy, policy})
     JumpWire.GlobalConfig.delete(:policies, {org_id, policy_id})
+    hook(policy, :delete)
   end
 
   def apply_policies(policies, record, request) do

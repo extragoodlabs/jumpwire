@@ -36,20 +36,44 @@ defmodule JumpWire.API.PoliciesRouter do
     with {:ok, assertion} <- @sso_module.fetch_active_assertion(conn),
          uuid <- Uniq.UUID.uuid4(),
          updated <- conn.body_params |> Map.put("id", uuid),
-         {:ok, group} <- JumpWire.Policy.from_json(updated, assertion.computed.org_id),
-         {:ok, group} <- JumpWire.Policy.put(assertion.computed.org_id, group) do
-      send_json_resp(conn, 201, group)
+         {:ok, policy} <- JumpWire.Policy.from_json(updated, assertion.computed.org_id),
+         {:ok, policy} <- JumpWire.Policy.put(:insert, assertion.computed.org_id, policy) do
+      send_json_resp(conn, 201, policy)
     else
       :error ->
         send_json_resp(conn, 401, %{error: "SSO login required"})
 
       {:error, reason} ->
-        Logger.error("Failed to process group: #{inspect(reason)}")
-        send_resp(conn, 400, "Failed to process group")
+        Logger.error("Failed to process policy: #{inspect(reason)}")
+        send_resp(conn, 400, "Failed to process policy")
 
       error ->
-        Logger.error("Failed to create group: #{inspect(error)}")
-        send_json_resp(conn, 500, %{error: "Failed to create group"})
+        Logger.error("Failed to create policy: #{inspect(error)}")
+        send_json_resp(conn, 500, %{error: "Failed to create policy"})
+    end
+  end
+
+  put "/:id" do
+    id = String.downcase(id)
+
+    with {:ok, assertion} <- @sso_module.fetch_active_assertion(conn),
+         # verify the policy exists
+         _ <- JumpWire.Policy.fetch(assertion.computed.org_id, id),
+         body <- conn.body_params,
+         {:ok, policy} <- JumpWire.Policy.from_json(body, assertion.computed.org_id),
+         {:ok, policy} <- JumpWire.Policy.put(:update, assertion.computed.org_id, policy) do
+      send_json_resp(conn, 200, policy)
+    else
+      :error ->
+        send_json_resp(conn, 401, %{error: "SSO login required"})
+
+      {:error, reason} ->
+        Logger.error("Failed to process policy: #{inspect(reason)}")
+        send_resp(conn, 400, "Failed to process policy")
+
+      error ->
+        Logger.error("Failed to update policy: #{inspect(error)}")
+        send_json_resp(conn, 500, %{error: "Failed to update policy"})
     end
   end
 
@@ -57,14 +81,14 @@ defmodule JumpWire.API.PoliciesRouter do
     id = String.downcase(id)
 
     with {:ok, assertion} <- @sso_module.fetch_active_assertion(conn),
-         {:ok, group} <- JumpWire.Policy.fetch(assertion.computed.org_id, id) do
-      send_json_resp(conn, 200, group)
+         {:ok, policy} <- JumpWire.Policy.fetch(assertion.computed.org_id, id) do
+      send_json_resp(conn, 200, policy)
     else
       :error ->
         send_json_resp(conn, 401, %{error: "SSO login required"})
 
       _ ->
-        send_json_resp(conn, 404, %{error: "Group not found"})
+        send_json_resp(conn, 404, %{error: "policy not found"})
     end
   end
 
@@ -74,7 +98,7 @@ defmodule JumpWire.API.PoliciesRouter do
     case @sso_module.fetch_active_assertion(conn) do
       {:ok, assertion} ->
         JumpWire.Policy.delete(assertion.computed.org_id, id)
-        send_json_resp(conn, 200, %{message: "Group deleted"})
+        send_json_resp(conn, 200, %{message: "policy deleted"})
 
       _ ->
         send_json_resp(conn, 401, %{error: "SSO login required"})
