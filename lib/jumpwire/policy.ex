@@ -153,6 +153,14 @@ defmodule JumpWire.Policy do
     hook(policy, :delete)
   end
 
+  def delete_all(org_id) do
+    policies = list_all(org_id)
+
+    Enum.each(policies, fn policy ->
+      delete(org_id, policy.id)
+    end)
+  end
+
   def apply_policies(policies, record, request) do
     # Update the request to have attributes for all labels in the record
     labels =
