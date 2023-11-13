@@ -129,6 +129,7 @@ defmodule JumpWire.API.Router do
 
   forward "/manifests", to: JumpWire.API.ManifestRouter
   forward "/groups", to: JumpWire.API.GroupsRouter
+  forward "/policies", to: JumpWire.API.PoliciesRouter
   forward "/metastores", to: JumpWire.API.MetastoresRouter
 
   match _ do

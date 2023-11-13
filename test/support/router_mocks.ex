@@ -50,6 +50,20 @@ defmodule JumpWire.API.RouterMocks do
     }
   end
 
+  def policy(name, handling) do
+    %{
+      "name" => name,
+      "handling" => handling,
+      "label" => "pii",
+      "configuration" => %{
+        "type" => "resolve_fields",
+        "metastore_id" => "cb48a801-389b-4844-89e7-2b41e88317af",
+        "route_key" => "country_code",
+        "route_values" => ["DE", "FR", "GE"]
+      }
+    }
+  end
+
   def metastore_with_creds(name) do
     %{
       "name" => name,
