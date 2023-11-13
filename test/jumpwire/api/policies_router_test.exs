@@ -6,16 +6,12 @@ defmodule JumpWire.PoliciesRouterTest do
 
   @opts PoliciesRouter.init([])
 
-  @org_id "adb4eef3-a8da-457c-8e69-9e589d109f90"
-
   # Ensure tests are run such that they can use the mock
   setup :verify_on_exit!
 
   setup do
     # Register cleanup callback
-    on_exit(fn ->
-      JumpWire.Policy.delete_all(@org_id)
-    end)
+    JumpWire.GlobalConfig.delete_all(:policies)
 
     :ok
   end
@@ -25,7 +21,7 @@ defmodule JumpWire.PoliciesRouterTest do
       mock_policy = JumpWire.API.RouterMocks.policy("test-policy", "access")
 
       expect(JumpWire.SSO.MockImpl, :fetch_active_assertion, 2, fn _ ->
-        {:ok, %{computed: %{org_id: @org_id}}}
+        {:ok, %{computed: %{org_id: "adb4eef3-a8da-457c-8e69-9e589d109f90"}}}
       end)
 
       token = JumpWire.API.Token.get_root_token()
