@@ -60,4 +60,21 @@ defmodule JumpWire.Metastore do
   def fetch_all(conn, keys, store) do
     store.configuration.__struct__.fetch_all(conn, keys, store)
   end
+
+  def fetch(org_id, store_id) do
+    key = {org_id, store_id}
+    JumpWire.GlobalConfig.fetch(:metastores, key)
+  end
+
+  def put(org_id, metastore) do
+    JumpWire.GlobalConfig.put(:metastores, {org_id, metastore.id}, metastore)
+  end
+
+  def list_all(org_id) do
+    JumpWire.GlobalConfig.all(:metastores, {org_id, :_})
+  end
+
+  def delete(org_id, metastore_id) do
+    JumpWire.GlobalConfig.delete(:metastores, {org_id, metastore_id})
+  end
 end

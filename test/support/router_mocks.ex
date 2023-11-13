@@ -49,4 +49,44 @@ defmodule JumpWire.API.RouterMocks do
       "permissions" => permissions
     }
   end
+
+  def metastore_with_creds(name) do
+    %{
+      "name" => name,
+      "credentials" => %{
+        "username" => "test-username",
+        "password" => "test-password"
+      },
+      "configuration" => %{
+        "type" => "postgresql_kv",
+        "connection" => %{
+          "hostname" => "pii_edb",
+          "port" => 5432,
+          "database" => "db",
+          "ssl" => false
+        },
+        "table" => "pii",
+        "key_field" => "key",
+        "value_field" => "value"
+      }
+    }
+  end
+
+  def metastore_without_creds(name) do
+    %{
+      "name" => name,
+      "configuration" => %{
+        "type" => "postgresql_kv",
+        "connection" => %{
+          "hostname" => "pii_edb",
+          "port" => 5432,
+          "database" => "db",
+          "ssl" => false
+        },
+        "table" => "pii",
+        "key_field" => "key",
+        "value_field" => "value"
+      }
+    }
+  end
 end
