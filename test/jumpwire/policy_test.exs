@@ -4,6 +4,7 @@ defmodule JumpWire.PolicyTest do
   import ExUnit.CaptureLog
   alias JumpWire.Policy
   alias JumpWire.Record
+  alias JumpWire.Proxy.SQL
 
   @org_id Application.compile_env(:jumpwire, JumpWire.Cloak.KeyRing)[:default_org]
 
@@ -478,6 +479,43 @@ defmodule JumpWire.PolicyTest do
     test "except when no accept policies match", %{policies: policies, metadata: metadata, record: record} do
       metadata = %{metadata | attributes: MapSet.new(["delete:pii", "group:Engineers"])}
       assert :blocked == Policy.apply_policies(policies, record, metadata)
+    end
+  end
+
+  describe "request filter policy" do
+    setup %{org_id: org_id} do
+      record = %Record{
+        data: %{},
+        labels: %{},
+        source: "PolicyTest",
+      }
+      # go through the full parsing flow instead of just creating a request so that a reference
+      # is allocated in the rust NIF
+      {:ok, [{_statement, ref}]} = SQL.Parser.parse_postgresql("SELECT id FROM mytable")
+      record = %{record | source_data: ref}
+
+      policy = %Policy{
+        version: 2,
+        id: Uniq.UUID.uuid4(),
+        handling: :filter_request,
+        organization_id: org_id,
+        apply_on_match: true,
+        attributes: [MapSet.new(["*"])],
+        configuration: %JumpWire.Policy.FilterRequest{table: "mytable", field: "value"},
+      }
+
+      %{record: record, policy: policy}
+    end
+
+    test "errors when missing a connection id", %{metadata: metadata, record: record, policy: policy} do
+      assert {:halt, {:error, :missing_sql_id}} = Policy.apply_policy(policy, record, metadata)
+    end
+
+    test "applies to strings", %{metadata: metadata, record: record, policy: policy} do
+      value = Uniq.UUID.uuid4()
+      metadata = Map.put(metadata, :params, %{"jw_id" => value})
+      assert {:cont, %Record{source_data: ref}} = Policy.apply_policy(policy, record, metadata)
+      assert {:ok, "SELECT id FROM mytable WHERE value = '#{value}'"} == SQL.Parser.to_sql(ref)
     end
   end
 end
