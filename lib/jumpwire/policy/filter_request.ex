@@ -30,7 +30,7 @@ defmodule JumpWire.Policy.FilterRequest do
     opts = policy.configuration
 
     with :user_id <- opts.source,
-         {:ok, %{"jw_id" => id}} when is_binary(id) <- Map.fetch(request, :params) do
+         {:ok, %{"jw_id" => id}} <- Map.fetch(request, :params) do
       case Parser.add_table_selection(ref, opts.table, opts.field, :eq, id) do
         :ok -> {:cont, record}
         err ->

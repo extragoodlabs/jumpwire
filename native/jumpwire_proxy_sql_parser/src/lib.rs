@@ -1,5 +1,5 @@
 use crate::filter::TableFilterVisit;
-use rustler::{Atom, Binary, Env, Error, NifResult, NifUnitEnum, ResourceArc, Term};
+use rustler::{Atom, Binary, Env, Error, NifResult, NifUnitEnum, ResourceArc, Term, TermType};
 use serde_rustler::prefixed_to_term;
 use sqlparser::ast::{visit_statements_mut, BinaryOperator, Expr, Ident, Statement, Value};
 use sqlparser::dialect::{GenericDialect, MySqlDialect, PostgreSqlDialect};
@@ -109,13 +109,21 @@ fn add_table_selection<'a>(
     table: String,
     left: String,
     op: BinaryOp,
-    right: String,
+    right: Term<'a>,
 ) -> NifResult<Atom> {
     let left = Expr::Identifier(Ident {
         value: left,
         quote_style: None,
     });
-    let right = Expr::Value(Value::SingleQuotedString(right));
+    let right = match right.get_type() {
+        TermType::Number => {
+            let term: i32 = right.decode()?;
+            Expr::Value(Value::Number(term.to_string(), false))
+        }
+        TermType::Binary => Expr::Value(Value::SingleQuotedString(right.decode()?)),
+        _ => return Err(Error::Atom("invalid_value")),
+    };
+
     let selection = match op {
         BinaryOp::Eq => Expr::BinaryOp {
             left: Box::new(left),
