@@ -406,7 +406,7 @@ defmodule JumpWire.Proxy.Postgres do
       {"user", value} ->
         case String.split(value, "#", parts: 2) do
           [user, jw_id] ->
-            [{"user", user}, {"jw_id", Database.sanitize_id(jw_id)}]
+            [{"user", user}, {"jw_id", Database.parse_id(jw_id)}]
 
           _ -> [{"user", value}]
         end

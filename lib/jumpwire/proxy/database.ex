@@ -357,6 +357,17 @@ defmodule JumpWire.Proxy.Database do
   end
 
   @doc """
+  Sanitize a string containing a connection ID and parse it into an integer if possible.
+  """
+  def parse_id(id) do
+    id = sanitize_id(id)
+    case Integer.parse(id) do
+      {int_id, ""} -> int_id
+      _ -> id
+    end
+  end
+
+  @doc """
   Sanitize a string being passed in as part of the connection params.
   """
   def sanitize_id(id) do
