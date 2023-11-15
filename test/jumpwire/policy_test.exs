@@ -517,5 +517,12 @@ defmodule JumpWire.PolicyTest do
       assert {:cont, %Record{source_data: ref}} = Policy.apply_policy(policy, record, metadata)
       assert {:ok, "SELECT id FROM mytable WHERE value = '#{value}'"} == SQL.Parser.to_sql(ref)
     end
+
+    test "applies to integers", %{metadata: metadata, record: record, policy: policy} do
+      value = Enum.random(1..65_535)
+      metadata = Map.put(metadata, :params, %{"jw_id" => value})
+      assert {:cont, %Record{source_data: ref}} = Policy.apply_policy(policy, record, metadata)
+      assert {:ok, "SELECT id FROM mytable WHERE value = #{value}"} == SQL.Parser.to_sql(ref)
+    end
   end
 end
