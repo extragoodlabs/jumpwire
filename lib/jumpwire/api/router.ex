@@ -5,7 +5,6 @@ defmodule JumpWire.API.Router do
 
   use Plug.Router
   use Honeybadger.Plug
-  use Plug.ErrorHandler
   alias JumpWire.API.Token
   import JumpWire.Router.Helpers
   require Logger
