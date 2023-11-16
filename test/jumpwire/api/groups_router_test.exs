@@ -28,33 +28,21 @@ defmodule JumpWire.GroupsRouterTest do
 
       token = JumpWire.API.Token.get_root_token()
 
-      conn =
-        conn(:post, "/", mock_group)
-        |> put_auth_header(token)
-        |> GroupsRouter.call(@opts)
+      conn = conn(:post, "/", mock_group)
+      |> put_auth_header(token)
+      |> GroupsRouter.call(@opts)
 
       assert conn.status == 201
 
-      conn =
-        conn(:get, "/")
-        |> put_auth_header(token)
-        |> GroupsRouter.call(@opts)
+      conn = conn(:get, "/")
+      |> put_auth_header(token)
+      |> GroupsRouter.call(@opts)
 
       assert conn.status == 200
 
-      case Jason.decode(conn.resp_body) do
-        {:ok, body} ->
-          expected = [mock_group]
-
-          assert length(body) == 1
-          head = List.first(body)
-
-          assert length(head["policies"]) == 2
-          assert mock_group["name"] == head["name"]
-
-        {:error, _} ->
-          assert false
-      end
+      assert {:ok, [head]} = Jason.decode(conn.resp_body)
+      assert length(head["policies"]) == 2
+      assert mock_group["name"] == head["name"]
     end
 
     test "PUT returns a 201 status with valid input" do
@@ -66,39 +54,26 @@ defmodule JumpWire.GroupsRouterTest do
 
       token = JumpWire.API.Token.get_root_token()
 
-      conn =
-        conn(:get, "/")
-        |> put_auth_header(token)
-        |> GroupsRouter.call(@opts)
+      conn = conn(:get, "/")
+      |> put_auth_header(token)
+      |> GroupsRouter.call(@opts)
 
       assert conn.status == 200
       assert conn.resp_body == "[]"
 
-      conn =
-        conn(:post, "/", mock_group)
-        |> put_auth_header(token)
-        |> GroupsRouter.call(@opts)
+      conn = conn(:post, "/", mock_group)
+      |> put_auth_header(token)
+      |> GroupsRouter.call(@opts)
 
       assert conn.status == 201
 
-      conn =
-        conn(:get, "/")
-        |> put_auth_header(token)
-        |> GroupsRouter.call(@opts)
+      conn = conn(:get, "/")
+      |> put_auth_header(token)
+      |> GroupsRouter.call(@opts)
 
-      case Jason.decode(conn.resp_body) do
-        {:ok, body} ->
-          expected = [mock_group]
-
-          assert length(body) == 1
-          head = List.first(body)
-
-          assert length(head["policies"]) == 2
-          assert mock_group["name"] == head["name"]
-
-        {:error, _} ->
-          assert false
-      end
+      assert {:ok, [head]} = Jason.decode(conn.resp_body)
+      assert length(head["policies"]) == 2
+      assert mock_group["name"] == head["name"]
     end
 
     test "GET /:id returns a 200 status with valid group ID" do
@@ -188,13 +163,5 @@ defmodule JumpWire.GroupsRouterTest do
 
   defp put_auth_header(conn, token) do
     put_req_header(conn, "authorization", "Bearer #{token}")
-  end
-
-  defp drop_id(response) when is_list(response) do
-    Enum.map(response, fn r -> Map.drop(r, ["id"]) end)
-  end
-
-  defp drop_id(response) when is_map(response) do
-    Map.drop(response, ["id"])
   end
 end

@@ -249,12 +249,4 @@ defmodule JumpWire.PoliciesRouterTest do
   defp put_auth_header(conn, token) do
     put_req_header(conn, "authorization", "Bearer #{token}")
   end
-
-  defp drop_id(response) when is_list(response) do
-    Enum.map(response, fn r -> Map.drop(r, ["id"]) end)
-  end
-
-  defp drop_id(response) when is_map(response) do
-    Map.drop(response, ["id"])
-  end
 end
