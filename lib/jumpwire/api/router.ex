@@ -145,8 +145,4 @@ defmodule JumpWire.API.Router do
   defp json_response(conn, _opts) do
     put_resp_content_type(conn, "application/json")
   end
-
-  defp send_json_resp(conn, status, body) do
-    send_resp(conn, status, Jason.encode!(body))
-  end
 end

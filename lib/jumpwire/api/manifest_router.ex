@@ -4,36 +4,16 @@ defmodule JumpWire.API.ManifestRouter do
   """
 
   use Plug.Router
-  use Honeybadger.Plug
-  use Plug.ErrorHandler
-  import JumpWire.Router.Helpers
   require Logger
-
-  @sso_module Application.compile_env(:jumpwire, [:sso, :module])
+  import JumpWire.Router.Helpers
 
   plug :match
-  plug :put_secret_key_base
-
-  plug Plug.Session,
-    store: :cookie,
-    key: "_jumpwire_key",
-    signing_salt: "I5bC7Dc3"
-
-  plug :fetch_session
-  plug JumpWire.API.AuthPipeline
-  plug :fetch_query_params
-
-  plug Plug.Parsers,
-    parsers: [{:json, json_decoder: Jason}],
-    pass: ["*/*"]
-
-  plug :json_response
   plug :dispatch
 
   get "/" do
     type = Map.get(conn.query_params, "type")
 
-    case @sso_module.fetch_active_assertion(conn) do
+    case fetch_active_assertion(conn) do
       {:ok, assertion} ->
         body =
           if type do
@@ -52,7 +32,7 @@ defmodule JumpWire.API.ManifestRouter do
   end
 
   put "/" do
-    with {:ok, assertion} <- @sso_module.fetch_active_assertion(conn),
+    with {:ok, assertion} <- fetch_active_assertion(conn),
          uuid <- Uniq.UUID.uuid4(),
          {:ok, manifest} <-
            conn.body_params
@@ -77,7 +57,7 @@ defmodule JumpWire.API.ManifestRouter do
   get "/:id" do
     id = String.downcase(id)
 
-    with {:ok, assertion} <- @sso_module.fetch_active_assertion(conn),
+    with {:ok, assertion} <- fetch_active_assertion(conn),
          {:ok, manifest} <- JumpWire.Manifest.fetch(assertion.computed.org_id, id) do
       send_json_resp(conn, 200, manifest)
     else
@@ -92,7 +72,7 @@ defmodule JumpWire.API.ManifestRouter do
   delete "/:id" do
     id = String.downcase(id)
 
-    case @sso_module.fetch_active_assertion(conn) do
+    case fetch_active_assertion(conn) do
       {:ok, assertion} ->
         JumpWire.Manifest.delete(assertion.computed.org_id, id)
         send_json_resp(conn, 200, %{message: "Manifest deleted"})
@@ -105,7 +85,7 @@ defmodule JumpWire.API.ManifestRouter do
   post "/:mid/proxy-schemas" do
     manifest_id = String.downcase(mid)
 
-    with {:ok, assertion} <- @sso_module.fetch_active_assertion(conn),
+    with {:ok, assertion} <- fetch_active_assertion(conn),
          uuid <- Uniq.UUID.uuid4(),
          {:ok, raw_schema} <-
            conn.body_params
@@ -132,7 +112,7 @@ defmodule JumpWire.API.ManifestRouter do
   get "/:mid/proxy-schemas" do
     manifest_id = String.downcase(mid)
 
-    with {:ok, assertion} <- @sso_module.fetch_active_assertion(conn),
+    with {:ok, assertion} <- fetch_active_assertion(conn),
          schemas <- JumpWire.Proxy.Schema.list_all(assertion.computed.org_id, manifest_id) do
       schemas =
         Enum.map(schemas, fn s ->
@@ -153,7 +133,7 @@ defmodule JumpWire.API.ManifestRouter do
     manifest_id = String.downcase(mid)
     proxy_schema_id = String.downcase(id)
 
-    with {:ok, assertion} <- @sso_module.fetch_active_assertion(conn),
+    with {:ok, assertion} <- fetch_active_assertion(conn),
          {:ok, schema} <- JumpWire.Proxy.Schema.fetch(assertion.computed.org_id, manifest_id, proxy_schema_id) do
       schema = %JumpWire.Proxy.Schema{schema | fields: JumpWire.Proxy.Schema.denormalize_schema_fields(schema)}
       send_json_resp(conn, 200, schema)
@@ -173,7 +153,7 @@ defmodule JumpWire.API.ManifestRouter do
     manifest_id = String.downcase(mid)
     proxy_schema_id = String.downcase(id)
 
-    case @sso_module.fetch_active_assertion(conn) do
+    case fetch_active_assertion(conn) do
       {:ok, assertion} ->
         JumpWire.Proxy.Schema.delete(assertion.computed.org_id, manifest_id, proxy_schema_id)
         send_json_resp(conn, 200, %{message: "Proxt Schema deleted"})
@@ -186,7 +166,7 @@ defmodule JumpWire.API.ManifestRouter do
   post "/:mid/client-auths" do
     manifest_id = String.downcase(mid)
 
-    with {:ok, assertion} <- @sso_module.fetch_active_assertion(conn),
+    with {:ok, assertion} <- fetch_active_assertion(conn),
          uuid <- Uniq.UUID.uuid4(),
          {:ok, raw_client_auth} <-
            conn.body_params
@@ -212,7 +192,7 @@ defmodule JumpWire.API.ManifestRouter do
   get "/:mid/client-auths" do
     manifest_id = String.downcase(mid)
 
-    with {:ok, assertion} <- @sso_module.fetch_active_assertion(conn),
+    with {:ok, assertion} <- fetch_active_assertion(conn),
          client_auths <- JumpWire.ClientAuth.list_all(assertion.computed.org_id, manifest_id) do
       send_json_resp(conn, 200, client_auths)
     else
@@ -228,7 +208,7 @@ defmodule JumpWire.API.ManifestRouter do
     manifest_id = String.downcase(mid)
     client_auth_id = String.downcase(id)
 
-    with {:ok, assertion} <- @sso_module.fetch_active_assertion(conn),
+    with {:ok, assertion} <- fetch_active_assertion(conn),
          {:ok, client_auth} <- JumpWire.ClientAuth.fetch(assertion.computed.org_id, manifest_id, client_auth_id) do
       send_json_resp(conn, 200, client_auth)
     else
@@ -247,7 +227,7 @@ defmodule JumpWire.API.ManifestRouter do
     manifest_id = String.downcase(mid)
     client_auth_id = String.downcase(id)
 
-    case @sso_module.fetch_active_assertion(conn) do
+    case fetch_active_assertion(conn) do
       {:ok, assertion} ->
         JumpWire.ClientAuth.delete(assertion.computed.org_id, manifest_id, client_auth_id)
         send_json_resp(conn, 200, %{message: "Client Auth deleted"})
@@ -259,19 +239,5 @@ defmodule JumpWire.API.ManifestRouter do
 
   match _ do
     send_resp(conn, 404, %{error: "not found"})
-  end
-
-  @impl Plug.ErrorHandler
-  def handle_errors(conn, %{kind: _kind, reason: _reason, stack: _stack}) do
-    body = %{error: "an unknown error occurred", status: conn.status}
-    send_json_resp(conn, conn.status, body)
-  end
-
-  defp json_response(conn, _opts) do
-    put_resp_content_type(conn, "application/json")
-  end
-
-  defp send_json_resp(conn, status, body) do
-    send_resp(conn, status, Jason.encode!(body))
   end
 end

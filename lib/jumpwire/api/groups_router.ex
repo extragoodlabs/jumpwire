@@ -4,25 +4,14 @@ defmodule JumpWire.API.GroupsRouter do
   """
 
   use Plug.Router
-  use Honeybadger.Plug
-  use Plug.ErrorHandler
-  import JumpWire.Router.Helpers
   require Logger
-
-  @sso_module Application.compile_env(:jumpwire, [:sso, :module])
+  import JumpWire.Router.Helpers
 
   plug :match
-  plug :put_secret_key_base
-
-  plug Plug.Session,
-    store: :cookie,
-    key: "_jumpwire_key",
-    signing_salt: "I5bC7Dc3"
-
   plug :dispatch
 
   get "/" do
-    case @sso_module.fetch_active_assertion(conn) do
+    case fetch_active_assertion(conn) do
       {:ok, assertion} ->
         body = JumpWire.Group.list_all(assertion.computed.org_id)
         send_json_resp(conn, 200, body)
@@ -33,7 +22,7 @@ defmodule JumpWire.API.GroupsRouter do
   end
 
   post "/" do
-    with {:ok, assertion} <- @sso_module.fetch_active_assertion(conn),
+    with {:ok, assertion} <- fetch_active_assertion(conn),
          uuid <- Uniq.UUID.uuid4(),
          updated <- conn.body_params |> Map.put("id", uuid),
          {:ok, group} <- JumpWire.Group.from_json({updated["name"], updated}, assertion.computed.org_id),
@@ -56,7 +45,7 @@ defmodule JumpWire.API.GroupsRouter do
   get "/:id" do
     id = String.downcase(id)
 
-    with {:ok, assertion} <- @sso_module.fetch_active_assertion(conn),
+    with {:ok, assertion} <- fetch_active_assertion(conn),
          {:ok, group} <- JumpWire.Group.fetch(assertion.computed.org_id, id) do
       send_json_resp(conn, 200, group)
     else
@@ -71,7 +60,7 @@ defmodule JumpWire.API.GroupsRouter do
   delete "/:id" do
     id = String.downcase(id)
 
-    case @sso_module.fetch_active_assertion(conn) do
+    case fetch_active_assertion(conn) do
       {:ok, assertion} ->
         JumpWire.Group.delete(assertion.computed.org_id, id)
         send_json_resp(conn, 200, %{message: "Group deleted"})
@@ -83,15 +72,5 @@ defmodule JumpWire.API.GroupsRouter do
 
   match _ do
     send_resp(conn, 404, %{error: "not found"})
-  end
-
-  @impl Plug.ErrorHandler
-  def handle_errors(conn, %{kind: _kind, reason: _reason, stack: _stack}) do
-    body = %{error: "an unknown error occurred", status: conn.status}
-    send_json_resp(conn, conn.status, body)
-  end
-
-  defp send_json_resp(conn, status, body) do
-    send_resp(conn, status, Jason.encode!(body))
   end
 end
