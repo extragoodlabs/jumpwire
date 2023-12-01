@@ -293,6 +293,7 @@ defmodule JumpWire.Proxy.MySQL do
     state = %{client_socket: %Socket{state: {:fast_auth, _}}}
   ) do
     # SSLRequest
+    Logger.debug("Negotiating client SSL connection")
     %Socket{transport: :ranch_tcp, socket: socket, state: sock_state} = state.client_socket
     case :ranch_ssl.handshake(socket, state.server_ssl_opts, @timeout) do
       {:ok, ssl_sock} ->
