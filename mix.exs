@@ -62,7 +62,7 @@ defmodule JumpWire.MixProject do
       # every use of ex_aws_route53
       # https://github.com/ex-aws/ex_aws_route53/issues/10
       {:xml_builder, "~> 2.0.0"},
-      {:rustler, "~> 0.27.0"},
+      {:rustler, "~> 0.30.0"},
       {:phoenix_pubsub, "~> 2.0.0"},
 
       # Read config files

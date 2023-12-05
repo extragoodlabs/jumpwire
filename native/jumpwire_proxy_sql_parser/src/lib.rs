@@ -116,7 +116,7 @@ fn add_table_selection<'a>(
         quote_style: None,
     });
     let right = match right.get_type() {
-        TermType::Number => {
+        TermType::Integer | TermType::Float => {
             let term: i32 = right.decode()?;
             Expr::Value(Value::Number(term.to_string(), false))
         }
